@@ -1,6 +1,7 @@
 import wx
 import src.engine
 import src.gui.camera
+import src.gui.error
 import logging
 logger = logging.getLogger(__name__)
 #config
@@ -55,7 +56,7 @@ def create(parent_frame):
 
 def toplight_cmd(event):
     src.engine.engine.send_command("gcode/script", 
-        {"script": f"TOP_LIGHT S={1 if topcam_light.GetValue() else 0}"})
+        {"script": f"TOP_LIGHT S={1 if topcam_light.GetValue() else 0}"},src.gui.error.gcode_error_callback)
 
 def add_to_menu(menu):
     item = menu.AppendCheckItem(ID, "Topcam Panel")

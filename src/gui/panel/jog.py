@@ -1,5 +1,6 @@
 import wx
 import src.engine
+import src.gui.error
 import logging
 logger = logging.getLogger(__name__)
 DISTANCES = [0.1, 1.0, 10, 50, 100]
@@ -176,15 +177,12 @@ def get_angle():
 def get_speed():
     return SPEEDS[speed_radio.GetSelection()]
 
-def jog_callback(data):
-    #todo: pop dialog on error
-    logging.info("jog_callback %s"%data)
 
 def goto(axis, position):
     speed = get_speed()
     command = f"G90\nG1 {axis}{position:.3f} F{speed * 60}"
     src.engine.engine.queue.put(("response", {"sub":"gcode","params":{"jog":'goto',"command":command}}, None))
-    src.engine.engine.send_command("gcode/script", {"script": command})
+    src.engine.engine.send_command("gcode/script", {"script": command},src.gui.error.gcode_error_callback)
 
 def jog_axis(axes, distance):
     speed = get_speed()
@@ -192,11 +190,11 @@ def jog_axis(axes, distance):
     command = f"G91\nG1 {cmd} F{speed * 60}"
     logging.info("jog_axis %s"%command)
     src.engine.engine.queue.put(("response", {"sub":"gcode","params":{"jog":'jog',"command":command}}, None))
-    src.engine.engine.send_command("gcode/script", {"script": command},jog_callback)
+    src.engine.engine.send_command("gcode/script", {"script": command},src.gui.error.gcode_error_callback)
 
 def send_gcode(command):
     src.engine.engine.queue.put(("response", {"sub":"gcode","params":{"jog":'command',"command":command}}, None))
-    src.engine.engine.send_command("gcode/script", {"script": command})
+    src.engine.engine.send_command("gcode/script", {"script": command},src.gui.error.gcode_error_callback)
 
 def add_to_menu(menu):
     item = menu.AppendCheckItem(ID, "Jog Panel")

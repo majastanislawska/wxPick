@@ -1,0 +1,8 @@
+setuptools
+jaraco.text #needed by py2app apparently
+py2app
+# actual deps
+wxpython==4.2.3
+opencv-python
+cv2_enumerate_cameras
+opencv-camera

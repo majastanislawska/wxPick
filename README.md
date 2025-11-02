@@ -17,6 +17,7 @@ Besides that, there's:
 * a Jog Panel
 * a Toolbar with buttons for most important commands (emergency shutdown and restart), it also serves as a boilerplate on how to create own toolbars with other commands.
 * Object Browser. A treeview panel that let you see whole internal state of Pick (Klipper)
+* jog buttons for rotary axes do 45 and 90 move instead of 50 and 100. Quite practical when your rotary axes are in degrees
 * graphs.
 * easily expandable modular design and code
 

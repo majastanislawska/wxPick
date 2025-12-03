@@ -5,14 +5,34 @@ import ctypes
 import os
 logger = logging.getLogger(__name__)
 
-LIB_PATHS = ["./libopenpnp-capture.dylib",]
-lib = None
-for path in LIB_PATHS:
-    if os.path.exists(path):
-        lib = ctypes.CDLL(path)
-        break
-if lib is None:
-    raise FileNotFoundError("libopenpnp-capture.dylib not found. Install OpenPnP or copy the dylib.")
+def load_openpnp_capture():
+    base_dir = os.path.dirname(os.path.abspath(__file__))  # src/gui
+    lib_dir = os.path.join(base_dir, "..", "lib")
+    macapp_lib_dir = os.path.join(base_dir, "..","..","..", "lib")
+    candidates = [
+        # Built by Makefile
+        os.path.join(lib_dir, "libopenpnp-capture.dylib"),
+        os.path.join(macapp_lib_dir, "libopenpnp-capture.dylib"),
+        os.path.join(lib_dir, "openpnp-capture.dll"),
+        os.path.join(lib_dir, "libopenpnp-capture.so"),
+        # Fallback: local dev path
+        "./libopenpnp-capture.dylib",
+        "./openpnp-capture.dll",
+        "./libopenpnp-capture.so",
+    ]
+    for path in candidates:
+        print(f"path: {path}")
+        if os.path.exists(path):
+            try:
+                lib = ctypes.CDLL(path)
+                print(f"Loaded openpnp-capture from: {path}")
+                return lib
+            except Exception as e:
+                print(f"Failed to load {path}: {e}")
+    raise FileNotFoundError("openpnp-capture library not found.")
+
+lib = load_openpnp_capture()
+
 class CapFormatInfo(ctypes.Structure):
     _fields_ = [
         ("width", ctypes.c_uint32), #///< width in pixels

@@ -12,7 +12,7 @@ setup(
         exclude=['test*']
     ),
     app=['wxPick.py'],
-    data_files=['src/'],
+    data_files=['src/','lib/'],
     include_package_data=True,
     options={'py2app': OPTIONS},
     setup_requires=['py2app'],

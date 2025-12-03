@@ -1,0 +1,3 @@
+[submodule "external/openpnp-capture"]
+	path = external/openpnp-capture
+	url = https://github.com/openpnp/openpnp-capture.git

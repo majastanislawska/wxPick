@@ -1,11 +1,12 @@
 import wx
 import src.engine
-import src.gui.camera
+import src.camera
 import src.gui.error
 import logging
 logger = logging.getLogger(__name__)
 #config
-topcam_cv_id =1200
+topcam_cam_uuid='USB Camera (Generic) 0x141340000bda3036'
+topcam_fmt_id=11
 topcam_framerate=30
 #"globals"
 ID = wx.NewIdRef()
@@ -45,7 +46,7 @@ def create(parent_frame):
     zoom_slider.Bind(wx.EVT_SLIDER, lambda e: topcam.set_zoom(e.GetEventObject().GetValue() / 100.0))
     grid.Add(zoom_slider, pos=(0, 1), flag=wx.ALL | wx.EXPAND, border=0)
     
-    topcam= src.gui.camera.Camera(panel,topcam_cv_id,zoom_slider)
+    topcam= src.camera.Camera(panel,topcam_cam_uuid,topcam_fmt_id,zoom_slider)
     grid.Add(topcam, pos=(1,0), span=(1,3), flag=wx.EXPAND  |wx.ALL, border=0)
     grid.AddGrowableCol(1)
     grid.AddGrowableRow(1)

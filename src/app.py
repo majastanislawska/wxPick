@@ -193,6 +193,7 @@ class App(wx.Frame):
         if ('toolhead' in response['status'] and
             'position' in response['status']['toolhead']):
             d=response['status']['toolhead']['position']
+            if d is None: return
             pos_str = " ".join([f"{a}:{p:.3f}" for a, p in zip("XYZEAB", d)])
             self.statusBar.SetStatusText(pos_str, 4)
             #f = self.statusBar.GetFont ()

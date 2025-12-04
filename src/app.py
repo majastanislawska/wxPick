@@ -8,7 +8,7 @@ import src.gui.notebook.log
 import src.gui.notebook.gcode
 import src.gui.notebook.objects
 import src.gui.notebook.graphs
-# import src.gui.notebook.config
+import src.gui.notebook.config
 import src.gui.panel.topcam
 import src.gui.panel.jog
 import src.gui.graph.system_stats
@@ -109,7 +109,7 @@ class App(wx.Frame):
         self.engine.set_log_handler(self.log_handler)
         src.gui.notebook.objects.create(self.notebook)
         src.gui.notebook.graphs.create(self.notebook)
-        # src.gui.notebook.config.create(self.notebook)
+        src.gui.notebook.config.create(self.notebook)
         self.notebook.Bind(wx.aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.on_notebook_page_close)
         self.aui_mgr.AddPane(self.notebook, wx.aui.AuiPaneInfo().Name("Notebook").CenterPane())
         src.gui.toolbar.restart.create(self)
@@ -131,7 +131,7 @@ class App(wx.Frame):
         src.gui.notebook.log.add_to_menu(view_menu)
         src.gui.notebook.gcode.add_to_menu(view_menu)
         src.gui.notebook.graphs.add_to_menu(view_menu)
-        # src.gui.notebook.config.add_to_menu(view_menu)
+        src.gui.notebook.config.add_to_menu(view_menu)
         #view_menu.AppendSeparator()
         #view_menu.Append(999, "Reset Layout")
         #self.Bind(wx.EVT_MENU, self.on_reset_layout, id=999)
@@ -143,7 +143,7 @@ class App(wx.Frame):
         name = self.notebook.GetPageText(page_index)
         match name:
             case src.gui.notebook.graphs.name: self.GetMenuBar().Check(src.gui.notebook.graphs.ID, False)
-            # case src.gui.notebook.config.name: self.GetMenuBar().Check(src.gui.notebook.config.ID, False)
+            case src.gui.notebook.config.name: self.GetMenuBar().Check(src.gui.notebook.config.ID, False)
             case src.gui.notebook.gcode.name: self.GetMenuBar().Check(src.gui.notebook.gcode.ID, False)
             case src.gui.notebook.log.name: self.GetMenuBar().Check(src.gui.notebook.log.ID, False)
             case src.gui.notebook.objects.name: self.GetMenuBar().Check(src.gui.notebook.objects.ID, False)

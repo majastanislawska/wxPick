@@ -179,7 +179,6 @@ def update_prop(pg:wx.propgrid.PropertyGridManager,cam,key,val):
 def make_config(pg: wx.propgrid.PropertyGridManager):
     #we got to start stream in order to get prop values
     topcam.cam_start()
-    pg.RegisterEditor(DynamicComboBoxEditor)
     pg.Append( wx.propgrid.PropertyCategory("Topcam Config") )
     prop=SelectCameraProp("topcam_cam_id", "topcam_cam_id", topcam_cam_uuid)
     prop.SetClientData(topcam_pg_callback)

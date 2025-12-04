@@ -274,12 +274,12 @@ class Camera(wx.StaticBitmap):
     def get_formats(self):
         count = lib.Cap_getNumFormats(self.ctx, self.camera_id)
         logger.info(f"Device {self.camera_id} has {count} formats")
-        out=[]
+        out={}
         for fmt_id in range(count):
             fmt=get_format_info(self.ctx, self.camera_id, fmt_id)
             (id,w,h,fps,cc)=fmt
             logger.info(f"Format {id}: {w}x{h}@{fps}fps {cc}")
-            out.append(f"{id}: {w}x{h}@{fps}fps {cc}")
+            out[id]=f"{id}: {w}x{h}@{fps}fps {cc}"
         return out
 
     def get_limits(self,prop_id):

@@ -9,6 +9,7 @@ import src.gui.notebook.gcode
 import src.gui.notebook.objects
 import src.gui.notebook.graphs
 import src.gui.notebook.config
+import src.gui.notebook.calibration
 import src.gui.panel.topcam
 import src.gui.panel.jog
 import src.gui.graph.system_stats
@@ -110,6 +111,7 @@ class App(wx.Frame):
         src.gui.notebook.objects.create(self.notebook)
         src.gui.notebook.graphs.create(self.notebook)
         src.gui.notebook.config.create(self.notebook)
+        src.gui.notebook.calibration.create(self.notebook)
         self.notebook.Bind(wx.aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.on_notebook_page_close)
         self.aui_mgr.AddPane(self.notebook, wx.aui.AuiPaneInfo().Name("Notebook").CenterPane())
         src.gui.toolbar.restart.create(self)

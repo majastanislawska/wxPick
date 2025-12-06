@@ -178,11 +178,10 @@ class Camera(wx.StaticBitmap):
         self.zoom_slider=zoom_slider
         self.zoom_level = 1.0
         self.aspect_ratio = 4/3 #placeholder
-        # self.processor_name = processor_name
-        # self.processor = self.load_processor(processor_name)
         self.bitmap = wx.NullBitmap
         self.is_enabled = False
-        #off-bitmap
+        self.frameoverlay=None
+        self.canvas_overlays=[] #callback(w,h,canvas_rgb)
         self.SetBitmap(wx.ArtProvider.GetBitmap("cam-off", wx.ART_OTHER,(48,48)))
         self.Bind(wx.EVT_MOUSEWHEEL, self.on_scroll)
         self.timer = wx.Timer(self)
@@ -245,29 +244,40 @@ class Camera(wx.StaticBitmap):
 
     def on_timer(self, event):
         frame = self.get_frame()
-        if frame is None:  return
-        self.aspect_ratio = self.frame_w / self.frame_h
-        # Process frame
-        #frame = self.processor.process(frame)
         cw,ch = self.GetSize()
+        scaled_frame=self.process_frame(cw,ch,frame)
+        self.display_frame(cw,ch,scaled_frame)
+
+    def set_frameoverlay(self, frameoverlay):
+        self.frameoverlay=frameoverlay
+
+    def process_frame(self,cw,ch,frame):
+        if frame is None:  return None
+        self.aspect_ratio = self.frame_w / self.frame_h
+        if self.frameoverlay is not None:
+            frame=cv2.addWeighted(frame, 0.65, self.frameoverlay, 0.35, 0)
         self.width = int(min(cw, ch * self.aspect_ratio))
         self.height = int(min(ch, cw / self.aspect_ratio))
-        if self.zoom_level>1:
-            crop_w = int(self.frame_w / self.zoom_level)
-            crop_h = int(self.frame_h / self.zoom_level)
-            start_x = (self.frame_w - crop_w) // 2
-            start_y = (self.frame_h - crop_h) // 2
-            #logger.info("zooming %s,%s %s,%s"%(crop_w,crop_h, self.width,self.height))
-            cropped_frame = frame[start_y:start_y + crop_h, start_x:start_x + crop_w]
-            scaled_frame = cv2.resize(cropped_frame, (self.width,self.height), interpolation=cv2.INTER_AREA)
-        else:
+        if self.zoom_level==1:
             #logger.info("no zoom %s,%s %s,%s"%(frame_w,frame_h, self.width,self.height))
-            scaled_frame = cv2.resize(frame, (self.width,self.height), interpolation=cv2.INTER_AREA)
+            return cv2.resize(frame, (self.width,self.height), interpolation=cv2.INTER_AREA)
+        crop_w = int(self.frame_w / self.zoom_level)
+        crop_h = int(self.frame_h / self.zoom_level)
+        start_x = (self.frame_w - crop_w) // 2
+        start_y = (self.frame_h - crop_h) // 2
+        #logger.info("zooming %s,%s %s,%s"%(crop_w,crop_h, self.width,self.height))
+        cropped_frame = frame[start_y:start_y + crop_h, start_x:start_x + crop_w]
+        return cv2.resize(cropped_frame, (self.width,self.height), interpolation=cv2.INTER_AREA)
+
+    def display_frame(self,cw,ch,scaled_frame):
+        if scaled_frame is None:  return None
         x_offset = (cw - self.width) // 2
         y_offset = (ch - self.height) // 2
         canvas = numpy.zeros((ch, cw, 3), dtype=numpy.uint8)
         canvas[y_offset:y_offset + self.height, x_offset:x_offset + self.width] = scaled_frame
         canvas_rgb = cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB)
+        for callback in self.canvas_overlays:
+            callback(cw,ch,canvas_rgb)
         self.bitmap = wx.Bitmap.FromBuffer(cw, ch, canvas_rgb)
         self.Refresh()
 
@@ -311,16 +321,6 @@ class Camera(wx.StaticBitmap):
 
     def on_paint(self, event):
         wx.BufferedPaintDC(self, self.bitmap)
-
-    # def load_processor(self, processor_name):
-    #     try:
-    #         module = importlib.import_module(f"src.processing.{processor_name}")
-    #         importlib.reload(module)
-    #         return module.Processor()
-    #     except (ImportError, AttributeError) as e:
-    #         print(f"Failed to load processor {processor_name}: {e}")
-    #         from src.processing.base_processor import BaseProcessor
-    #         return BaseProcessor()
 
     def on_scroll(self, event):
         delta = event.GetWheelRotation() / 1200  # Normalize to ~0.1 steps

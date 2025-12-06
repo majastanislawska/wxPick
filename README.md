@@ -14,6 +14,13 @@ Besides that, there's:
 * a "gcode console" where you can type commands, and view all Pick (klipper) replies (uses standard klipper's "gcode/subscribe_output")
 * a log console that shows all Pick (klipper) APIServer "webhooks" traffic on it's Unix Socket.
 * Camera support based on openpnp-capture, so if your cmera works witl openpnp it will work here, camera params (exposure, focus, brigthess etc) are supported.
+* Camera overlays: Two kinds:
+
+  * one is merged with camera frame (`cv2.addWeighted(frame, 0.65, self.frameoverlay, 0.35, 0)`) before zooming.
+  This is intended for heatmaps ant other outputs of image processing.
+  you can grab own camera frame, process it and than assign it to `camera.frameoverlay` to be displayed.
+  * second is in form of callback that is called right before widget is rendered to xwBitmap. create `callback(w,h,canvas_rgb)` and append it to `camera.canvas_overlays` list. `w` and `h` is size of paintarea of camera widget, i may add coordinates of rectangle where camera frame actually is in it with scaling factor etc in the future.
+
 * Camera window, with controls for light and zoom (have `TOP_LIGHT S={0|1}` in Klipper config to control your camera light)
 * a Jog Panel
 * a Toolbar with buttons for most important commands (emergency shutdown and restart), it also serves as a boilerplate on how to create own toolbars with other commands.

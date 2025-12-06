@@ -1,4 +1,5 @@
 import wx
+import src.gui.calibration.focus
 import logging
 logger = logging.getLogger(__name__)
 ID = wx.NewIdRef()
@@ -15,6 +16,7 @@ def create(notebook):
     sizer = wx.BoxSizer(wx.VERTICAL)
     panel.SetSizer(sizer)
     panel.SetScrollRate(10, 10)
+    sizer.Add(src.gui.calibration.focus.create(panel), 0, wx.ALL | wx.EXPAND, 5)
     notebook.AddPage(panel, name, False)
     sizer.Layout()
     return panel

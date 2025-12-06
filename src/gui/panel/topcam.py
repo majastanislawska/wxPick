@@ -56,6 +56,11 @@ def create(parent_frame):
     parent_frame.aui_mgr.Update()
     return panel
 
+def cam_enable(enable):
+    topcam_on.SetValue(enable)
+    if enable: topcam.cam_start()
+    else: topcam.cam_stop()
+
 def toplight_cmd(event):
     src.engine.engine.send_command("gcode/script", 
         {"script": f"TOP_LIGHT S={1 if topcam_light.GetValue() else 0}"},src.gui.error.gcode_error_callback)

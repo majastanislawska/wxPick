@@ -1,4 +1,5 @@
 setuptools
+pyinstaller
 jaraco.text #needed by py2app apparently
 py2app
 # actual deps

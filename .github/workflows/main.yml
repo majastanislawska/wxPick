@@ -94,18 +94,14 @@ jobs:
         run: pip install -r requirements.txt pyinstaller
 
       - name: Build submodule (Windows)
-        run: |
-          # TODO: replace path\to\submodule and commands with your submodule build steps
-          cd path\to\submodule
-          .\build-windows.bat
-          New-Item -ItemType Directory -Force -Path ..\..\bundled_libs | Out-Null
-          Copy-Item .\build\mylib.dll ..\..\bundled_libs\
+        run: make capture
         shell: pwsh
 
       - name: Build executable (Windows)
         run: |
           pyinstaller --onefile --name wxPick \
-            --add-binary "bundled_libs\\mylib.dll;." \
+            --add-data "src/art:src/art" \
+            --add-binary "lib/libopenpnp-capture.dll:lib" \
             wxPick.py
         shell: pwsh
 
@@ -143,4 +139,5 @@ jobs:
           prerelease: false
           files: |
             wxPick
+            wxPick.app
             wxPick.exe

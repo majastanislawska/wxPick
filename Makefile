@@ -39,7 +39,7 @@ $(CAPTURE_TARGET):
 		$(CMAKE_FLAGS)
 	cmake --build $(BUILD_DIR) --config Release --parallel
 
-# Copy to resources/ (where Python will find it)
+# Copy to lib/ (where Python will find it)
 $(FINAL_LIB): $(CAPTURE_TARGET)
 	@mkdir -p lib
 	cp $(CAPTURE_TARGET) $@
@@ -47,7 +47,7 @@ $(FINAL_LIB): $(CAPTURE_TARGET)
 
 # Clean
 capture-clean:
-	rm -rf $(BUILD_DIR) resources/$(CAPTURE_LIB)
+	rm -rf $(BUILD_DIR) lib/$(CAPTURE_LIB)
 
 # # Windows-specific: use MinGW or MSVC
 # capture-windows:

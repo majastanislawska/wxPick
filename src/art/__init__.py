@@ -1,3 +1,4 @@
+import os
 import wx
 import wx.svg
 import logging
@@ -43,4 +44,6 @@ class myArtProvider(wx.ArtProvider):
             bmp=self.create_scaled_bitmap(artid, size)
         return bmp
     def create_scaled_bitmap(self, name: str, size) -> wx.Bitmap:
-        return wx.svg.SVGimage.CreateFromFile('src/art/%s.svg'%artmap[name]).ConvertToScaledBitmap(size)
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        fname=os.path.join(base_dir, f'{artmap[name]}.svg')
+        return wx.svg.SVGimage.CreateFromFile(fname).ConvertToScaledBitmap(size)

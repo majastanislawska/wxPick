@@ -1,7 +1,12 @@
 from setuptools import setup, find_packages
 
 DATA_FILES = ['src']
-OPTIONS = {}
+OPTIONS = {
+    'argv_emulation': True,
+    'plist': {
+        'NSCameraUsageDescription': "This app requires camera access to see what your PNP machine's camera sees",
+    },
+}
 
 setup(
     name="wxPick",

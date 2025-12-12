@@ -1,4 +1,7 @@
 import wx
+try:
+    import Cocoa
+except ImportError: pass
 import threading
 import json
 import logging
@@ -31,6 +34,10 @@ def main():
     wx.ArtProvider.Push(src.art.myArtProvider())
     frame = src.app.App(engine)
     frame.Show()
+    try:
+        Cocoa.NSApplication.sharedApplication()
+        Cocoa.NSApp().activateIgnoringOtherApps_(True)
+    except NameError: pass
     engine.start()
     tcpserver_thread=threading.Thread(
         target=src.engine.start_tcp_server, 

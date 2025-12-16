@@ -14,6 +14,7 @@ Besides that, there's:
 * a "gcode console" where you can type commands, and view all Pick (klipper) replies (uses standard klipper's "gcode/subscribe_output")
 * a log console that shows all Pick (klipper) APIServer "webhooks" traffic on it's Unix Socket.
 * Camera support based on openpnp-capture, so if your cmera works witl openpnp it will work here, camera params (exposure, focus, brigthess etc) are supported.
+* Camera can load calibration data from OpenPNP config (advanced calibration)
 * Camera overlays: Two kinds:
 
   * one is merged with camera frame (`cv2.addWeighted(frame, 0.65, self.frameoverlay, 0.35, 0)`) before zooming.

@@ -3,6 +3,7 @@ import cv2,numpy
 import logging
 import ctypes
 import os
+import xml.etree.ElementTree as ET
 logger = logging.getLogger(__name__)
 
 def load_openpnp_capture():
@@ -182,6 +183,11 @@ class Camera(wx.StaticBitmap):
         self.is_enabled = False
         self.frameoverlay=None
         self.canvas_overlays=[] #callback(w,h,canvas_rgb)
+        # placeholders for OpenPnP advanced calibration 
+        self.camera_matrix = None # will be set to default in cam_start if not loaded
+        self.virtual_matrix = None  # will be set to camera_matrix if not loaded
+        self.dist_coeffs = numpy.zeros(5)
+        self.rectification_matrix = numpy.eye(3)      # identity rotation
         self.SetBitmap(wx.ArtProvider.GetBitmap("cam-off", wx.ART_OTHER,(48,48)))
         self.Bind(wx.EVT_MOUSEWHEEL, self.on_scroll)
         self.timer = wx.Timer(self)
@@ -193,7 +199,33 @@ class Camera(wx.StaticBitmap):
         #     raise ValueError(f"Only {lib.Cap_getDeviceCount(self.ctx)} devices found")
         count = lib.Cap_getNumFormats(self.ctx, self.camera_id)
         if self.fmt_id>count: self.fmt_id=count-1
-        (_,self.frame_w,self.frame_h,self.fps,_)=get_format_info(self.ctx,self.camera_id, self.fmt_id)
+        (_,self.cam_w,self.cam_h,self.fps,_)=get_format_info(self.ctx,self.camera_id, self.fmt_id)
+        logger.info(f"Starting camera {self.camera_id} format {self.fmt_id} {self.cam_w}x{self.cam_h}@{self.fps}fps")
+        if self.camera_matrix is None:
+            self.camera_matrix = numpy.array([
+                [self.cam_w, 0.0, self.cam_w / 2],
+                [0.0, self.cam_w, self.cam_h / 2],
+                [0.0, 0.0, 1.0]
+            ])
+        if self.virtual_matrix is None:
+            self.virtual_matrix = self.camera_matrix.copy()
+        self.map_x, self.map_y = cv2.initUndistortRectifyMap(
+            self.camera_matrix,
+            self.dist_coeffs,
+            self.rectification_matrix, #R rotation/tilt
+            self.virtual_matrix,
+            (self.cam_w,self.cam_h),
+            cv2.CV_32FC1
+        )
+        # optical center in undistorted but not cropped frame
+        self.optical_cx = self.virtual_matrix[0, 2]
+        self.optical_cy = self.virtual_matrix[1, 2]
+        # this is for crop to square around optical center in undistort_frame
+        crop_size = int(min(
+            min(self.optical_cx, (self.cam_w - self.optical_cx)),
+            min(self.optical_cy, (self.cam_h - self.optical_cy))
+        ))
+        self.crop_size = crop_size
         self.stream = lib.Cap_openStream(self.ctx, self.camera_id, self.fmt_id)
         if  self.stream <0:
             raise RuntimeError("Failed to open camera with openpnp-capture")  
@@ -230,17 +262,30 @@ class Camera(wx.StaticBitmap):
         self.fmt_id = val
         if running: self.cam_start()
 
+    def undistort_frame(self, frame):
+        frame = cv2.remap(frame, self.map_x, self.map_y, cv2.INTER_LINEAR)
+        # Crop to square around optical center
+        cx = self.virtual_matrix[0, 2]
+        cy = self.virtual_matrix[1, 2]
+        frame = frame[int(cy - self.crop_size) : int(cy + self.crop_size),
+                      int(cx - self.crop_size) : int(cx + self.crop_size)]
+        self.frame_h, self.frame_w = frame.shape[:2]
+        self.optical_cx = self.frame_w//2
+        self.optical_cy = self.frame_h//2
+        return frame  # now square, no black, optical center at (crop_size/2, crop_size/2)
+        # return cv2.remap(raw_bgr, self.map_x, self.map_y, cv2.INTER_LINEAR)
+
     def get_frame(self):
         # Grab raw BGR24 frame
-        buffer_size = self.frame_h * self.frame_w * 3
+        buffer_size = self.cam_h * self.cam_w * 3
         buffer = ctypes.create_string_buffer(buffer_size)
         result = lib.Cap_captureFrame(self.ctx, self.stream,
             buffer, ctypes.c_uint32(buffer_size))
         if result != 0:
             return None
-        np_frame = numpy.frombuffer(buffer, dtype=numpy.uint8).reshape(
-            (self.frame_h, self.frame_w, 3))
-        return np_frame.copy()
+        frame = numpy.frombuffer(buffer, dtype=numpy.uint8).reshape(
+            (self.cam_h, self.cam_w, 3))
+        return self.undistort_frame(frame)
 
     def on_timer(self, event):
         frame = self.get_frame()
@@ -253,20 +298,24 @@ class Camera(wx.StaticBitmap):
 
     def process_frame(self,cw,ch,frame):
         if frame is None:  return None
+        # keep this func rectangular frame compatible
+        # so it still works when croping to square in undistort_frame is ditched
         self.aspect_ratio = self.frame_w / self.frame_h
         if self.frameoverlay is not None:
-            frame=cv2.addWeighted(frame, 0.65, self.frameoverlay, 0.35, 0)
+            frame=cv2.addWeighted(frame, 1, self.frameoverlay, 1, 0)
         self.width = int(min(cw, ch * self.aspect_ratio))
         self.height = int(min(ch, cw / self.aspect_ratio))
         if self.zoom_level==1:
-            #logger.info("no zoom %s,%s %s,%s"%(frame_w,frame_h, self.width,self.height))
             return cv2.resize(frame, (self.width,self.height), interpolation=cv2.INTER_AREA)
+        # for zooming calculate crop region centered on optical_cx, cy
         crop_w = int(self.frame_w / self.zoom_level)
         crop_h = int(self.frame_h / self.zoom_level)
-        start_x = (self.frame_w - crop_w) // 2
-        start_y = (self.frame_h - crop_h) // 2
-        #logger.info("zooming %s,%s %s,%s"%(crop_w,crop_h, self.width,self.height))
-        cropped_frame = frame[start_y:start_y + crop_h, start_x:start_x + crop_w]
+        x1 = int(self.optical_cx - crop_w / 2)
+        y1 = int(self.optical_cy - crop_h / 2)
+        x1 = max(0, min(x1, self.frame_w - crop_w))
+        y1 = max(0, min(y1, self.frame_h - crop_h))
+        cropped_frame = frame[y1:y1 + crop_h, x1:x1 + crop_w]
+        # and scale it to fit
         return cv2.resize(cropped_frame, (self.width,self.height), interpolation=cv2.INTER_AREA)
 
     def display_frame(self,cw,ch,scaled_frame):
@@ -331,3 +380,75 @@ class Camera(wx.StaticBitmap):
     def set_zoom(self, value):
         self.zoom_level = max(1.0, min(10.0, value))
         self.Refresh()
+
+    def load_calib_from_openpnp(self, xml_path, camera_name='TopCam'):
+        calib = load_openpnp_config(xml_path, camera_name)
+        self.camera_matrix = calib['camera_matrix']
+        self.dist_coeffs = calib['dist_coeffs']
+        self.rectification_matrix = calib['rectification_matrix']
+        self.virtual_matrix = calib['virtual_matrix']
+        logger.info(f"Loaded calibration for {camera_name} from {xml_path}")
+
+def load_openpnp_config(config_path, camera_name):
+    """
+    Loads OpenPnP machine.xml, finds the camera by name, extracts advanced calibration parameters.
+    Returns dict with camera_matrix, dist_coeffs, rectification_matrix, virtual_matrix.
+    """
+    xml_path = find_openpnp_machine_xml(config_path)
+    if xml_path is None:
+        print("load_openpnp_config: OpenPnP machine.xml not found.")
+        return None
+    print(f"Loading OpenPnP calibration from: {xml_path}")
+    tree = ET.parse(xml_path)
+    root = tree.getroot()
+    camera_elem = None
+    for cam in root.findall(".//camera"):
+        if cam.get('name') == camera_name:
+            camera_elem = cam
+            break
+    if camera_elem is None:
+        raise ValueError(f"Camera '{camera_name}' not found in {xml_path}")
+    calib_elem = camera_elem.find('advanced-calibration')
+    if calib_elem is None:
+        raise ValueError("No advanced-calibration found for this camera")
+    
+    def parse_matrix(elem_name):
+        elem = calib_elem.find(elem_name)
+        if elem is None:
+            return None
+        length = int(elem.get('length'))
+        values = [float(v) for v in elem.text.split(', ')]
+        if len(values) != length:
+            raise ValueError(f"Invalid length for {elem_name}")
+        return numpy.array(values).reshape(3, 3) if length == 9 else numpy.array(values)
+    config = {
+        'camera_matrix': parse_matrix('camera-matrix'),
+        'dist_coeffs': parse_matrix('distortion-coefficients'),
+        'rectification_matrix': parse_matrix('rectification-matrix'),
+        'virtual_matrix': parse_matrix('virtual-camera-matrix'),
+    }
+    return config
+
+def find_openpnp_machine_xml(explicit_path=None):
+    """
+    Find OpenPnP machine.xml, trying common locations.
+    Returns Path object or None.
+    """
+    if explicit_path:
+        path=os.path.expanduser(explicit_path)
+        if os.path.isfile(path):
+            return path
+    home = os.path.expanduser('~')
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    cwd = os.getcwd()
+    candidates = [
+        os.path.join(home,".openpnp2","machine.xml"),
+        os.path.join(home,".openpnp","machine.xml"),
+        os.path.join(cwd,"machine.xml"),
+        os.path.join(cwd,".openpnp2","machine.xml"),
+        os.path.join(base_dir,"..","..","machine.xml"),
+    ]
+    for p in candidates:
+        if os.path.isfile(p):
+            return p
+    return None

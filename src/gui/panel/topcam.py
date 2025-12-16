@@ -9,6 +9,8 @@ logger = logging.getLogger(__name__)
 topcam_cam_uuid='USB Camera (Generic) 0x141340000bda3036'
 topcam_fmt_id=11
 topcam_framerate=30
+openenpnp_config_path="~.openpnp2/machine.xml"
+openpnp_camera_name="TopCam"
 #"globals"
 ID = wx.NewIdRef()
 name="Topcam Panel"
@@ -48,6 +50,7 @@ def create(parent_frame):
     grid.Add(zoom_slider, pos=(0, 1), flag=wx.ALL | wx.EXPAND, border=0)
     
     topcam= src.camera.Camera(panel,topcam_cam_uuid,topcam_fmt_id,zoom_slider)
+    topcam.load_calib_from_openpnp(openenpnp_config_path, openpnp_camera_name)
     grid.Add(topcam, pos=(1,0), span=(1,3), flag=wx.EXPAND  |wx.ALL, border=0)
     grid.AddGrowableCol(1)
     grid.AddGrowableRow(1)

@@ -329,7 +329,7 @@ class Camera(wx.StaticBitmap):
         canvas[fy:fy + self.height, fx:fx + self.width] = scaled_frame
         canvas_rgb = cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB)
         for callback in self.canvas_overlays:
-            callback(cw,ch,canvas_rgb)
+            callback(cw,ch,fx,fy,canvas_rgb)
         self.bitmap = wx.Bitmap.FromBuffer(cw, ch, canvas_rgb)
         self.Refresh()
 

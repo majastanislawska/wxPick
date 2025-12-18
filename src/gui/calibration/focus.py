@@ -129,7 +129,7 @@ def interpolate_distance(pos):
     return 0.0  # fallback (should never hit)
 
 
-def canvas_overlay(w,h,canvas_rgb):
+def canvas_overlay(w,h,fx,fy,canvas_rgb):
     pos, dist, score = last_result
     # 1. Big green text
     text = f"{dist:.1f} mm"

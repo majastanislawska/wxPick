@@ -48,7 +48,7 @@ def clear_overlay(evt):
     src.gui.panel.topcam.topcam.set_frameoverlay(None)
     src.gui.panel.topcam.topcam.canvas_overlays.remove(canvas_overlay)
 
-def canvas_overlay(w,h,canvas_rgb):
+def canvas_overlay(w,h,fx,fy,canvas_rgb):
     global fiducials
     for (x, y, r) in fiducials:
         cv2.circle(canvas_rgb, (int(x), int(y)), int(r), (0, 255, 255), 2)

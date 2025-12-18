@@ -7,3 +7,4 @@ numpy
 opencv-python
 cv2_enumerate_cameras
 opencv-camera
+kiutils

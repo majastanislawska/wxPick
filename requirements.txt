@@ -3,6 +3,7 @@ jaraco.text #needed by py2app apparently
 py2app
 # actual deps
 wxpython==4.2.3
+numpy
 opencv-python
 cv2_enumerate_cameras
 opencv-camera

@@ -1,6 +1,7 @@
 import wx
 import src.gui.calibration.focus
 import src.gui.calibration.fiducial_test
+import src.gui.calibration.pattern_match
 import logging
 logger = logging.getLogger(__name__)
 ID = wx.NewIdRef()
@@ -19,6 +20,7 @@ def create(notebook):
     panel.SetScrollRate(10, 10)
     sizer.Add(src.gui.calibration.focus.create(panel), 0, wx.ALL | wx.EXPAND, 5)
     sizer.Add(src.gui.calibration.fiducial_test.create(panel), 0, wx.ALL | wx.EXPAND, 5)
+    sizer.Add(src.gui.calibration.pattern_match.create(panel), 0, wx.ALL | wx.EXPAND, 5)
     notebook.AddPage(panel, name, False)
     sizer.Layout()
     return panel

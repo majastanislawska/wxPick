@@ -3,7 +3,6 @@ import cv2
 import numpy
 import src.gui.panel.topcam
 import src.vision.hough_fiducial
-import src.vision.pattern_match
 import collections
 import logging
 logger = logging.getLogger("src.engine") 

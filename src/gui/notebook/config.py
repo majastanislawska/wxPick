@@ -4,6 +4,7 @@ import wx
 import wx.adv
 import wx.propgrid
 import src.gui.panel.topcam
+import src.vision.pattern_match
 import src.gui.notebook.gcode  # Add other modules as needed
 import logging
 logger = logging.getLogger(__name__)
@@ -659,6 +660,7 @@ def create(notebook):
     pg=pgman.AddPage( "Page 1 - Testing All" )
 
     src.gui.panel.topcam.make_config(pg)
+    src.vision.pattern_match.make_config(pg)
     
     pg.Append( wx.propgrid.PropertyCategory("1 - Basic Properties") )
     pg.Append( wx.propgrid.StringProperty("String",value="Some Text") )

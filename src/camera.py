@@ -218,12 +218,12 @@ class Camera(wx.StaticBitmap):
             cv2.CV_32FC1
         )
         # optical center in undistorted but not cropped frame
-        self.optical_cx = self.virtual_matrix[0, 2]
-        self.optical_cy = self.virtual_matrix[1, 2]
+        self.raw_optical_cx = self.virtual_matrix[0, 2]
+        self.raw_optical_cy = self.virtual_matrix[1, 2]
         # this is for crop to square around optical center in undistort_frame
         crop_size = int(min(
-            min(self.optical_cx, (self.cam_w - self.optical_cx)),
-            min(self.optical_cy, (self.cam_h - self.optical_cy))
+            min(self.raw_optical_cx, (self.cam_w - self.raw_optical_cx)),
+            min(self.raw_optical_cy, (self.cam_h - self.raw_optical_cy))
         ))
         self.crop_size = crop_size
         self.stream = lib.Cap_openStream(self.ctx, self.camera_id, self.fmt_id)
@@ -265,8 +265,8 @@ class Camera(wx.StaticBitmap):
     def undistort_frame(self, frame):
         frame = cv2.remap(frame, self.map_x, self.map_y, cv2.INTER_LINEAR)
         # Crop to square around optical center
-        cx = self.virtual_matrix[0, 2]
-        cy = self.virtual_matrix[1, 2]
+        cx = self.raw_optical_cx
+        cy = self.raw_optical_cy
         frame = frame[int(cy - self.crop_size) : int(cy + self.crop_size),
                       int(cx - self.crop_size) : int(cx + self.crop_size)]
         self.frame_h, self.frame_w = frame.shape[:2]
@@ -275,7 +275,7 @@ class Camera(wx.StaticBitmap):
         return frame  # now square, no black, optical center at (crop_size/2, crop_size/2)
         # return cv2.remap(raw_bgr, self.map_x, self.map_y, cv2.INTER_LINEAR)
 
-    def get_frame(self):
+    def get_raw_frame(self):
         # Grab raw BGR24 frame
         buffer_size = self.cam_h * self.cam_w * 3
         buffer = ctypes.create_string_buffer(buffer_size)
@@ -285,7 +285,10 @@ class Camera(wx.StaticBitmap):
             return None
         frame = numpy.frombuffer(buffer, dtype=numpy.uint8).reshape(
             (self.cam_h, self.cam_w, 3))
-        return self.undistort_frame(frame)
+        return frame.copy()
+
+    def get_frame(self):
+        return self.undistort_frame(self.get_raw_frame())
 
     def on_timer(self, event):
         frame = self.get_frame()
@@ -320,10 +323,10 @@ class Camera(wx.StaticBitmap):
 
     def display_frame(self,cw,ch,scaled_frame):
         if scaled_frame is None:  return None
-        x_offset = (cw - self.width) // 2
-        y_offset = (ch - self.height) // 2
+        fx = (cw - self.width) // 2
+        fy = (ch - self.height) // 2
         canvas = numpy.zeros((ch, cw, 3), dtype=numpy.uint8)
-        canvas[y_offset:y_offset + self.height, x_offset:x_offset + self.width] = scaled_frame
+        canvas[fy:fy + self.height, fx:fx + self.width] = scaled_frame
         canvas_rgb = cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB)
         for callback in self.canvas_overlays:
             callback(cw,ch,canvas_rgb)

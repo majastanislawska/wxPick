@@ -190,6 +190,11 @@ class Camera(wx.StaticBitmap):
         self.rectification_matrix = numpy.eye(3)      # identity rotation
         self.SetBitmap(wx.ArtProvider.GetBitmap("cam-off", wx.ART_OTHER,(48,48)))
         self.Bind(wx.EVT_MOUSEWHEEL, self.on_scroll)
+        #--Navigation Overlay
+        self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
+        self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
+        self.Bind(wx.EVT_MOTION, self.OnMouseMove)
+        self.navOverlay = wx.Overlay()
         self.timer = wx.Timer(self)
         self.Bind(wx.EVT_TIMER, self.on_timer, self.timer)
 
@@ -383,6 +388,43 @@ class Camera(wx.StaticBitmap):
     def set_zoom(self, value):
         self.zoom_level = max(1.0, min(10.0, value))
         self.Refresh()
+
+    def OnLeftDown(self, event):
+        self.CaptureMouse()
+        # navStart = event.GetPosition()
+        self.SetFocus()
+
+    def OnMouseMove(self, event):
+        if event.Dragging() and event.LeftIsDown():
+            evtPos = event.GetPosition()
+            dc = wx.ClientDC(self)
+            odc = wx.DCOverlay(self.navOverlay, dc)
+            odc.Clear()
+            if 'wxMac' not in wx.PlatformInfo: dc = wx.GCDC(dc) #dunno what that is
+            #draw target square
+            dc.SetBrush(wx.Brush("White",wx.BRUSHSTYLE_TRANSPARENT))
+            dc.SetPen(wx.Pen("White", 1))
+            dc.DrawRectangle(evtPos[0]-20,evtPos[1]-20,40,40)
+            # and crosshair
+            dc.DrawLine(evtPos[0]-25,evtPos[1],   evtPos[0]+25,evtPos[1])
+            dc.DrawLine(evtPos[0]   ,evtPos[1]-25,evtPos[0],   evtPos[1]+25)
+            #and "vector" from "optical center"
+            (cw,ch)=self.GetSize()
+            dc.DrawLine((cw//2,ch//2),evtPos)
+            del odc
+
+    def OnLeftUp(self, event):
+        if self.HasCapture(): self.ReleaseMouse()
+        x,y = event.GetPosition()
+        (cw,ch)=self.GetSize()
+        if x>=0 and y>=0 and x<=cw and y<=ch:
+            logger.info(f"Topcam NavEnd:{(x,y)}")
+        else: logger.info(f"Topcam NavEnd abort:{(x,y)}")
+        dc = wx.ClientDC(self)
+        odc = wx.DCOverlay(self.navOverlay, dc)
+        odc.Clear()
+        del odc
+        self.navOverlay.Reset()
 
     def load_calib_from_openpnp(self, xml_path, camera_name='TopCam'):
         calib = load_openpnp_config(xml_path, camera_name)

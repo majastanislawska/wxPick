@@ -213,7 +213,8 @@ class Camera(wx.StaticBitmap):
                 [0.0, 0.0, 1.0]
             ])
         if self.virtual_matrix is None:
-            self.virtual_matrix = self.camera_matrix.copy()
+            self.virtual_matrix, roi = cv2.getOptimalNewCameraMatrix(
+                self.camera_matrix, self.dist_coeffs, (self.cam_w,self.cam_h), alpha=1)
         self.map_x, self.map_y = cv2.initUndistortRectifyMap(
             self.camera_matrix,
             self.dist_coeffs,

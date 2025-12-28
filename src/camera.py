@@ -237,6 +237,7 @@ class Camera(wx.StaticBitmap):
         self.is_enabled=True
         self.Bind(wx.EVT_PAINT, self.on_paint)
         self.timer.Start(int(1000/self.fps))
+        self.SetCursor(wx.Cursor(wx.CURSOR_CROSS))
 
     def cam_stop(self):
         self.is_enabled=False

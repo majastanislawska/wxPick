@@ -306,6 +306,15 @@ class Camera(wx.StaticBitmap):
     def set_frameoverlay(self, frameoverlay):
         self.frameoverlay=frameoverlay
 
+    def calc_zoom_crop(self):
+        crop_w = int(self.frame_w / self.zoom_level)
+        crop_h = int(self.frame_h / self.zoom_level)
+        x1 = int(self.optical_cx - crop_w / 2)
+        y1 = int(self.optical_cy - crop_h / 2)
+        x1 = max(0, min(x1, self.frame_w - crop_w))
+        y1 = max(0, min(y1, self.frame_h - crop_h))
+        return x1,y1,crop_w,crop_h
+
     def process_frame(self,cw,ch,frame):
         if frame is None:  return None
         # keep this func rectangular frame compatible
@@ -318,12 +327,7 @@ class Camera(wx.StaticBitmap):
         if self.zoom_level==1:
             return cv2.resize(frame, (self.width,self.height), interpolation=cv2.INTER_AREA)
         # for zooming calculate crop region centered on optical_cx, cy
-        crop_w = int(self.frame_w / self.zoom_level)
-        crop_h = int(self.frame_h / self.zoom_level)
-        x1 = int(self.optical_cx - crop_w / 2)
-        y1 = int(self.optical_cy - crop_h / 2)
-        x1 = max(0, min(x1, self.frame_w - crop_w))
-        y1 = max(0, min(y1, self.frame_h - crop_h))
+        x1,y1,crop_w,crop_h= self.calc_zoom_crop()
         cropped_frame = frame[y1:y1 + crop_h, x1:x1 + crop_w]
         # and scale it to fit
         return cv2.resize(cropped_frame, (self.width,self.height), interpolation=cv2.INTER_AREA)

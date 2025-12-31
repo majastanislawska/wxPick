@@ -120,14 +120,14 @@ def _append(message):
     gcode_display.ScrollLines(1)
 
 def on_gcode_sub(data):
-    logger.debug("on_gcode_sub: %s"%data)
+    # logger.debug("on_gcode_sub: %s"%data)
     message = data['response'] if 'response' in data else str(data)
     wx.CallAfter(_append,message)
 
 def send_gcode(event):
     command = gcmd_input.GetValue().strip()
     if command:
-        logger.info("Sending GCode: %s" % command)
+        # logger.info("Sending GCode: %s" % command)
         src.engine.engine.queue.put(("command", 
                 {"method": "gcode/script", "params": {"script": command}}, None))
         gcmd_input.Clear()

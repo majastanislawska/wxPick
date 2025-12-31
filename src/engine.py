@@ -102,7 +102,7 @@ class Engine:
             self.pending_requests[request_id] = request
             if callback:
                 self.pending_requests[request_id]["callback"] = callback
-            logger.info("send_command: %s" % data)
+            # logger.info("send_command: %s" % data)
         except socket.error as e:
             logger.error("Failed to send command: %s."%e)
             self.connected.clear()
@@ -178,7 +178,7 @@ class Engine:
                         if request_id in self.pending_requests:
                             request = self.pending_requests.pop(request_id)
                             response = data.get("result", data.get("error","No result or error"))
-                            logger.info("Received response for %s: %s"%(request['method'],response))
+                            # logger.info("Received response for %s: %s"%(request['method'],response))
                             if request.get("callback"):
                                 wx.CallAfter(request["callback"], response)
                 else:# Handle subscription message (no id, has subscription)

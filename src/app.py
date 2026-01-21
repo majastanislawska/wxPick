@@ -14,6 +14,7 @@ import src.gui.panel.topcam
 import src.gui.panel.jog
 import src.gui.graph.system_stats
 import src.gui.graph.temp
+import src.gui.graph.vacuum
 logger = logging.getLogger(__name__)
 
 class WxRichHandler(logging.Handler):
@@ -89,6 +90,7 @@ class App(wx.Frame):
         self.engine.subscribers.append(self.statusbar_update)
         self.engine.subscribers.append(src.gui.graph.system_stats.update)
         self.engine.subscribers.append(src.gui.graph.temp.update)
+        self.engine.subscribers.append(src.gui.graph.vacuum.update)
         self.aui_mgr = wx.aui.AuiManager(self)
         self.aui_mgr.SetManagedWindow(self)
         # self.frame2=FloatingFrame(self, "frame2", (300,300), (200,200), None)

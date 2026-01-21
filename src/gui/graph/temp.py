@@ -10,7 +10,7 @@ pane = None
 paneinfo=None
 parent=None
 
-colors=['red','green','blue']
+colors=['red','green','blue','yellow','cyan','magenta','black']
 data={}
 canvas= None
 graphics=None
@@ -41,15 +41,15 @@ def update(response):
     if not 'status' in response: return
     if data_start is None: data_start=response['eventtime']
     xval=int(response['eventtime']-data_start)
-    sensors=[x for x in response['status'].keys() if x.startswith("temperature_sensor")]
-    color=0
-    for sensor in sensors:  
+    sensors=[x for x in response['status'].keys()]# if x.startswith("temperature_sensor")]
+    for sensor in sensors:
+        if not 'temperature' in response['status'][sensor]: continue
+        if response['status'][sensor]['temperature'] is None: continue
         if not sensor in data.keys():
             data[sensor]=[]
             line_color[sensor]=colors.pop()
         if len(data[sensor])>250: data[sensor].pop(0)
         data[sensor].append((xval,response['status'][sensor]['temperature']))
         line[sensor] =wx.lib.plot.PolyLine(data[sensor], legend=sensor.split()[1],colour=line_color[sensor], width=1)
-        color+=1
     graphics = wx.lib.plot.PlotGraphics(list(line.values()), "Temperature", "", 'temperature')
     canvas.Draw(graphics,(0 if xval<100 else xval-100,xval))

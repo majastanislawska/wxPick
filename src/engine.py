@@ -17,8 +17,9 @@ class GCodeRequestHandler(socketserver.StreamRequestHandler):
         logger.info("TCP client connected: %s"%(self.client_address,))
         while engine.running.is_set():
             try:
-                data = self.rfile.readline().strip().decode()
-                #if not data:continue  # Ignore empty lines
+                data = self.rfile.readline()
+                if not data:continue
+                data=data.strip().decode()
                 logger.info("TCP server received: %s"%data)
                 # put commad as receive message so gcode window can show it
                 engine.queue.put(("response", {"sub":"gcode","params":{"TCP":self.client_address,"command":data}}, None))

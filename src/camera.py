@@ -191,6 +191,15 @@ class Camera(wx.StaticBitmap):
         self.SetBitmap(wx.ArtProvider.GetBitmap("cam-off", wx.ART_OTHER,(48,48)))
         self.Bind(wx.EVT_MOUSEWHEEL, self.on_scroll)
         #--Navigation Overlay
+        self.angle=0
+        self.navOverlay = wx.Overlay()
+        self.nav_rot = False
+        self.nav_drag = False
+        self.rotHandleDistance=40
+        self.rotHandle=(0,0) #will be calcullated in onPaint
+        self.rotDelta = (0, 0)
+        self.rotHandleRadius=10
+        self.rotSnap=None
         self.Bind(wx.EVT_LEFT_DOWN, self.OnLeftDown)
         self.Bind(wx.EVT_LEFT_UP, self.OnLeftUp)
         self.Bind(wx.EVT_MOTION, self.OnMouseMove)
@@ -384,6 +393,26 @@ class Camera(wx.StaticBitmap):
 
     def on_paint(self, event):
         wx.BufferedPaintDC(self, self.bitmap)
+        (w,h)=self.GetSize()
+        self.center=(w//2,h//2)
+        theta = numpy.radians(self.angle-90.0)
+        # if not self.nav_rot: #snap to def pos when not roating
+        self.rotHandle=(int(w/2+numpy.cos(theta)*self.rotHandleDistance), 
+                        int(h/2+numpy.sin(theta)*self.rotHandleDistance))
+        paintDC = wx.PaintDC(self)
+        self.draw_axes(paintDC)
+
+    def draw_axes(self, dc):
+        size=dc.GetSize()
+        dc.SetBrush(wx.Brush("white", wx.BRUSHSTYLE_TRANSPARENT))
+        dc.SetPen(wx.Pen("green",width=1,style= wx.PENSTYLE_SOLID))
+        p1, p2 = calculate_axis_line(self.center,size,self.angle)
+        if p1 and p2: dc.DrawLine(p1, p2)
+        dc.SetPen(wx.Pen("red",width=1,style= wx.PENSTYLE_SOLID))
+        p1, p2 = calculate_axis_line(self.center,size,self.angle-90)
+        if p1 and p2: dc.DrawLine(p1, p2)
+        dc.SetPen(wx.Pen("white",width=1,style= wx.PENSTYLE_SOLID))
+        dc.DrawCircle(self.rotHandle,self.rotHandleRadius)
 
     def on_scroll(self, event):
         delta = event.GetWheelRotation() / 1200  # Normalize to ~0.1 steps
@@ -396,41 +425,118 @@ class Camera(wx.StaticBitmap):
         self.Refresh()
 
     def OnLeftDown(self, event):
+        if not self.is_enabled: return
+        x,y= event.GetPosition()
+        if isPointInsideCircle((x,y), self.rotHandle, self.rotHandleRadius):
+            self.nav_rot = True; self.nav_drag = False
+            originx, originy = self.rotHandle
+            self.rotDelta = (x - originx, y - originy)
+        else:
+            self.nav_drag = True; self.nav_rot = False
         self.CaptureMouse()
-        # navStart = event.GetPosition()
         self.SetFocus()
 
     def OnMouseMove(self, event):
+        if not self.is_enabled: return
         if event.Dragging() and event.LeftIsDown():
-            evtPos = event.GetPosition()
+            evtPos =(x,y)= event.GetPosition()
             dc = wx.ClientDC(self)
             odc = wx.DCOverlay(self.navOverlay, dc)
             odc.Clear()
             if 'wxMac' not in wx.PlatformInfo: dc = wx.GCDC(dc) #dunno what that is
-            #draw target square
-            dc.SetBrush(wx.Brush("White",wx.BRUSHSTYLE_TRANSPARENT))
-            dc.SetPen(wx.Pen("White", 1))
-            dc.DrawRectangle(evtPos[0]-20,evtPos[1]-20,40,40)
-            # and crosshair
-            dc.DrawLine(evtPos[0]-25,evtPos[1],   evtPos[0]+25,evtPos[1])
-            dc.DrawLine(evtPos[0]   ,evtPos[1]-25,evtPos[0],   evtPos[1]+25)
-            #and "vector" from "optical center"
-            (cw,ch)=self.GetSize()
-            dc.DrawLine((cw//2,ch//2),evtPos)
+            if self.nav_rot:
+                self.rotHandle = (x-self.rotDelta[0], y-self.rotDelta[1])
+                self.angle = (90+get_angle(self.center,self.rotHandle))%360
+                self.draw_compass(dc)
+                self.draw_axes(dc)
+            elif self.nav_drag:
+                # draw target square
+                dc.SetBrush(wx.Brush("White", wx.BRUSHSTYLE_TRANSPARENT))
+                dc.SetPen(wx.Pen("White", 1))
+                dc.DrawRectangle(evtPos[0] - 20, evtPos[1] - 20, 40, 40)
+                # and crosshair
+                dc.DrawLine(evtPos[0] - 25, evtPos[1], evtPos[0] + 25, evtPos[1])
+                dc.DrawLine(evtPos[0], evtPos[1] - 25, evtPos[0], evtPos[1] + 25)
+                # and "vector" from "optical center"
+                dc.DrawLine(self.center, evtPos)
             del odc
 
     def OnLeftUp(self, event):
+        if not self.is_enabled: return
         if self.HasCapture(): self.ReleaseMouse()
         x,y = event.GetPosition()
-        (cw,ch)=self.GetSize()
-        if x>=0 and y>=0 and x<=cw and y<=ch:
-            logger.info(f"Topcam NavEnd:{(x,y)}")
-        else: logger.info(f"Topcam NavEnd abort:{(x,y)}")
+        (w,h)=self.GetSize()
         dc = wx.ClientDC(self)
         odc = wx.DCOverlay(self.navOverlay, dc)
         odc.Clear()
         del odc
         self.navOverlay.Reset()
+        if self.nav_rot:
+            self.nav_rot = False
+            if self.rotSnap is not None:
+                self.angle=self.rotSnap
+        elif self.nav_drag:
+            self.nav_drag = False
+            if x >= 0 and y >= 0 and x <= w and y <= h:
+                logger.info(f"Topcam NavEnd:{(x,y)} {(x-w//2,y-h//2)}")
+                mach=self.pixel_to_machine(x, y, w,h, 200,200,0)
+                logger.info(f"pixel_to_machine:{mach}")
+            else: logger.info(f"Topcam NavEnd abort:{(x,y)}")
+        self.Refresh()
+
+    def pixel_to_machine(self, px, py,cw,ch, mx,my,mz):
+        # logger.info(f"pixel_to_mach1:{(px,py)} {(cw,ch)}")
+        ##take out widget padding (canvas in display_frame)
+        pad_x = (cw - self.width) // 2
+        pad_y = (ch - self.height) // 2
+        px,py=px-pad_x,py-pad_y
+        # logger.info(f"pixel_to_mach2:{(px,py)} {(pad_x,pad_y)} {(self.width,self.height)}")
+        #deresize from widget size to frame (also if iis cropped for zooming)
+        crop_x1,crop_y1,crop_w,crop_h= self.calc_zoom_crop()
+        # 2. Scale from displayed size back to cropped size
+        px = px * (crop_w / self.width) + crop_x1
+        py = py * (crop_h / self.height) + crop_y1
+        # logger.info(f"pixel_to_mach3:{(px,py)} {(crop_x1,crop_y1,crop_w,crop_h)}")
+        #expand from roi/ undistort_frame crop
+        #full orignal frame size, make a ray
+        ray_c = numpy.array([
+            (px - self.virtual_matrix[0, 2]) / self.virtual_matrix[0, 0],  # (px - cx) / fx
+            (py - self.virtual_matrix[1, 2]) / self.virtual_matrix[1, 1],  # (py - cy) / fy
+            1.0])
+        # 3. Rotate ray into machine space
+        # roll_90_cw = np.array([[0, 1, 0],   # Or [[0, -1, 0], [1, 0, 0], [0, 0, 1]] for CCW
+        #                [-1, 0, 0],
+        #                [0, 0, 1]])
+        # ray_machine = self.R_cam2mach @ roll_90_cw @ ray_cam
+        ray_m = self.R_cam2mach @ ray_c
+        # Normalize direction by Z component
+        direction = ray_m *  self.camera_height_mm/ ray_m[2]#thisis1
+        lambda_scale = (mz- self.camera_height_mm) / direction[2]
+        camera_xy_mm = (mx,my,mz)
+        machine_pos = camera_xy_mm + lambda_scale * direction
+        return machine_pos
+
+    def draw_compass(self, dc):
+        cx, cy = self.center
+        x,y=self.rotHandle
+        r1,r2=10,50
+        dc.SetBrush(wx.Brush("White", wx.BRUSHSTYLE_TRANSPARENT))
+        normal_pen=wx.Pen("Gray", 1)
+        match_pen=wx.Pen("Magenta", 5)
+        self.rotSnap=None
+        dist=((x - cx)**2 + (y - cy)**2)
+        for deg in range(0, 360, 45):
+            p1,p2=compass_ray(self.center,numpy.radians(deg-90),r1,r2)
+            if r1**2<=dist<=r2**2 and angular_diff(deg,self.angle)<=15:
+                dc.SetPen(match_pen)
+                self.rotSnap=deg
+            else: 
+                dc.SetPen(normal_pen)
+            dc.DrawLine(p1,p2)
+        # Draw current angle indicator
+        dc.SetPen(wx.Pen("white", 1))
+        dc.DrawLine(self.center, self.rotHandle)
+        dc.DrawCircle(self.rotHandle,self.rotHandleRadius)
 
     def load_calib_from_openpnp(self, xml_path, camera_name='TopCam'):
         calib = load_openpnp_config(xml_path, camera_name)
@@ -439,6 +545,54 @@ class Camera(wx.StaticBitmap):
         self.rectification_matrix = calib['rectification_matrix']
         self.virtual_matrix = calib['virtual_matrix']
         logger.info(f"Loaded calibration for {camera_name} from {xml_path}")
+
+def calculate_axis_line(center, size,angle_deg):
+    theta = numpy.radians(angle_deg)
+    cx, cy = center
+    w, h = size
+    dx = numpy.cos(theta)
+    dy = numpy.sin(theta)
+    t_values = []
+    if abs(dx) > 1e-6:
+        t = (0 - cx) / dx
+        y = cy + t * dy
+        if 0 <= y <= h:  t_values.append(t)
+        t = (w - cx) / dx
+        y = cy + t * dy
+        if 0 <= y <= h:  t_values.append(t)
+    if abs(dy) > 1e-6:
+        t = (0 - cy) / dy
+        x = cx + t * dx
+        if 0 <= x <= w:  t_values.append(t)
+        t = (h - cy) / dy
+        x = cx + t * dx
+        if 0 <= x <= w:  t_values.append(t)
+    t_values = sorted(set(t_values))
+    if len(t_values) >= 2:
+        t1, t2 = t_values[0], t_values[-1]
+        p1 = (int(cx + t1 * dx), int(cy + t1 * dy))
+        p2 = (int(cx + t2 * dx), int(cy + t2 * dy))
+        return p1, p2
+    return None, None
+
+def compass_ray(c,theta,r1,r2):
+    co,si=numpy.cos(theta),numpy.sin(theta)
+    return ((int(c[0]+r1*co), int(c[1]+r1*si)),
+            (int(c[0]+r2*co), int(c[1]+r2*si)))
+
+def isPointInsideCircle(point, center, radius):
+    x,y=point
+    cx,cy=center
+    return ((x - cx)**2 + (y - cy)**2 <= radius**2)
+
+def get_angle(center, pos):
+        dx = pos[0] - center[0]
+        dy = pos[1] - center[1]
+        return numpy.rad2deg(numpy.arctan2(dy, dx))
+
+def angular_diff(a, b):
+    diff = abs(a - b) % 360
+    return min(diff, 360 - diff)
 
 def load_openpnp_config(config_path, camera_name):
     """

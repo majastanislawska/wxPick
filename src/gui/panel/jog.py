@@ -187,8 +187,7 @@ def goto(axis, position):
 def jog_axis(axes, distance):
     speed = get_speed()
     cmd=" ".join([f"{axis}{distance:.3f}" for axis in axes.split(" ")])
-    command = f"G91\nG1 {cmd} F{speed * 60}"
-    logging.info("jog_axis %s"%command)
+    command = f"G91\nG1 {cmd} F{speed * 60}\nG90"
     src.engine.engine.queue.put(("response", {"sub":"gcode","params":{"jog":'jog',"command":command}}, None))
     src.engine.engine.send_command("gcode/script", {"script": command},src.gui.error.gcode_error_callback)
 

@@ -1,4 +1,5 @@
 import wx
+import src.gui.graph.vacuum
 import src.gui.graph.system_stats
 import src.gui.graph.temp
 import logging
@@ -17,6 +18,7 @@ def create(notebook):
     sizer = wx.BoxSizer(wx.VERTICAL)
     panel.SetSizer(sizer)
     panel.SetScrollRate(10, 10)
+    sizer.Add(src.gui.graph.vacuum.create(panel), 0, wx.ALL | wx.EXPAND, 5)
     sizer.Add(src.gui.graph.system_stats.create(panel), 0, wx.ALL | wx.EXPAND, 5)
     sizer.Add(src.gui.graph.temp.create(panel), 0, wx.ALL | wx.EXPAND, 5)
     notebook.AddPage(panel, "Graphs", False)

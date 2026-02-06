@@ -69,6 +69,7 @@ class Engine:
             ,"pressure_sensor a28": ['pressure']
             ,"pressure_pump PUMP": ['pressure']
             # ,"pressure_sensor ads": ['pressure']
+            ,"ch224q_pd toolhead": ['voltage','powergood']
             }
         self.subscribers=[]
         self.gcode_sub_callback=None

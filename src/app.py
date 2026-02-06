@@ -194,6 +194,12 @@ class App(wx.Frame):
                 self.statusBar.SetStatusText("load:%s"%response['status']['system_stats']['sysload'], 1)
             if "memavail" in response['status']['system_stats']:
                 self.statusBar.SetStatusText("mem:%s"%response['status']['system_stats']['memavail'], 2)
+        if "ch224q_pd toolhead" in response['status']:
+            t=response['status']['ch224q_pd toolhead']
+            pd=t.get('powergood', self.engine.status['ch224q_pd toolhead'].get('powergood', None))
+            v=t.get('voltage', self.engine.status['ch224q_pd toolhead'].get('voltage', 'unknown'))
+            icons = { True: "🟢", False: "🔴", None: "●" }
+            self.statusBar.SetStatusText("PD:%s Volt:%s"%(icons[pd],v), 3)
         if ('toolhead' in response['status'] and
             'position' in response['status']['toolhead']):
             d=response['status']['toolhead']['position']

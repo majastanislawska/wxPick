@@ -62,6 +62,7 @@ def update(response):
     # logger.info("%s.update: %s"%(name,response))
     if not 'status' in response: return
     if not 'webhooks' in response['status']: return
+    if not 'state' in response['status']['webhooks']: return
     r=response['status']['webhooks']
     state = r['state']
     message = str(r.get('state_message',[])).strip().splitlines()[0]

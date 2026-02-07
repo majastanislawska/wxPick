@@ -64,8 +64,8 @@ class Engine:
             ,"system_stats": ["sysload","memavail"]
             ,"temperature_sensor mcu_temp": ['temperature']
             ,"temperature_sensor toolhead_temp": ['temperature']
-            ,"pressure_sensor vac0": ['pressure','temperature']
-            ,"pressure_sensor vac1": ['pressure','temperature']
+            ,"pressure_valve LEFT": None
+            ,"pressure_valve RIGHT": None
             ,"pressure_sensor a28": ['pressure']
             ,"pressure_pump PUMP": ['pressure']
             # ,"pressure_sensor ads": ['pressure']

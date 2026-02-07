@@ -3,6 +3,7 @@ import wx.aui
 import logging
 import src.gui.toolbar.restart
 import src.gui.toolbar.state
+import src.gui.toolbar.vacuum
 import src.gui.toolbar.position
 import src.gui.notebook.log
 import src.gui.notebook.gcode
@@ -117,6 +118,7 @@ class App(wx.Frame):
         self.notebook.Bind(wx.aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.on_notebook_page_close)
         self.aui_mgr.AddPane(self.notebook, wx.aui.AuiPaneInfo().Name("Notebook").CenterPane())
         src.gui.toolbar.restart.create(self)
+        src.gui.toolbar.vacuum.create(self)
         src.gui.toolbar.state.create(self)
         src.gui.toolbar.position.create(self)
         self.Bind(wx.aui.EVT_AUI_PANE_CLOSE, self.on_pane_close)
@@ -127,6 +129,7 @@ class App(wx.Frame):
         src.gui.toolbar.restart.add_to_menu(view_menu)
         src.gui.toolbar.state.add_to_menu(view_menu)
         src.gui.toolbar.position.add_to_menu(view_menu)
+        src.gui.toolbar.vacuum.add_to_menu(view_menu)
         view_menu.AppendSeparator()
         src.gui.panel.topcam.add_to_menu(view_menu)
         src.gui.panel.jog.add_to_menu(view_menu)

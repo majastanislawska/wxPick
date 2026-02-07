@@ -56,6 +56,7 @@ class Engine:
         self.lock = threading.Lock()
         self.running = threading.Event()
         self.connected = threading.Event()
+        self.status = {}
         self.pending_requests = {}
         self.subscribed_objects={
              "webhooks": None 
@@ -126,6 +127,11 @@ class Engine:
                        "objects": self.subscribed_objects}},
             self.process_object_subs))
     def process_object_subs(self,payload):
+        if  'status' in payload:
+            for i in payload['status'].keys():
+                if not i in self.status:
+                    self.status[i] = {}
+                self.status[i].update(payload['status'][i])
         for callback in self.subscribers:
             #logger.info("process_object_subs %s %s"%(callback,payload))
             callback(payload)

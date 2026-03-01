@@ -3,6 +3,7 @@ import sys, time, math, os, os.path
 import wx
 import wx.adv
 import wx.propgrid
+import src.app
 import src.gui.panel.topcam
 import src.vision.pattern_match
 import src.gui.notebook.gcode  # Add other modules as needed
@@ -10,6 +11,7 @@ import logging
 logger = logging.getLogger(__name__)
 ID = wx.NewIdRef()
 name="Config"
+app:src.app.App = None
 panel = None
 pane = None
 paneinfo=None

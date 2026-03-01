@@ -1,9 +1,11 @@
 import wx
 import src.engine
+import src.app
 import logging
 logger = logging.getLogger(__name__)
 ID = wx.NewIdRef()
-name="Gcode"
+name="Console"
+app:src.app.App = None
 panel = None
 pane = None
 paneinfo=None

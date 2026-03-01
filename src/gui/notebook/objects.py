@@ -1,9 +1,11 @@
 import wx
 import logging
 import src.engine
+import src.app
 logger = logging.getLogger(__name__)
 ID = wx.NewIdRef()
-name="Objecs"
+name="Objects"
+app:src.app.App = None
 panel = None
 pane = None
 paneinfo=None

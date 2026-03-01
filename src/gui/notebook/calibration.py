@@ -1,4 +1,5 @@
 import wx
+import src.app
 import src.gui.calibration.focus
 import src.gui.calibration.fiducial_test
 import src.gui.calibration.pattern_match
@@ -6,6 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 ID = wx.NewIdRef()
 name="Calibration"
+app:src.app.App = None
 panel = None
 pane = None
 paneinfo=None

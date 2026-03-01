@@ -1,6 +1,8 @@
 import wx
+import src.app
 ID = wx.NewIdRef()
-name="Log"
+name="Logs"
+app:src.app.App = None
 panel = None
 pane = None
 paneinfo=None

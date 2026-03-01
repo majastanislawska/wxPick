@@ -1,23 +1,32 @@
 import wx
 import wx.aui
+import os
+import re
+import importlib
 import logging
-import src.gui.toolbar.restart
-import src.gui.toolbar.state
-import src.gui.toolbar.vacuum
-import src.gui.toolbar.position
-import src.gui.notebook.log
-import src.gui.notebook.gcode
-import src.gui.notebook.objects
-import src.gui.notebook.graphs
-import src.gui.notebook.config
-import src.gui.notebook.calibration
-import src.gui.panel.topcam
-import src.gui.panel.jog
-import src.gui.graph.system_stats
-import src.gui.graph.temp
-import src.gui.graph.vacuum
+import src.gui #placeholder so plugins can load
 logger = logging.getLogger(__name__)
 
+notebook_plugins = []
+panel_plugins = []
+toolbar_plugins = []
+graph_plugins = []
+
+def load_plugins(app,package):
+    pysearchre = re.compile('.py$', re.IGNORECASE)
+    pluginfiles = filter(pysearchre.search,os.listdir(os.path.join(*package.split('.'))))
+    form_module = lambda fp: '.' + os.path.splitext(fp)[0]
+    plugins = map(form_module, pluginfiles)
+    # import parent module / namespace
+    #importlib.import_module('src')
+    modules = []
+    for plugin in plugins:
+        logger.info(f"Loading plugin {package}{plugin}")
+        if not plugin.startswith('__'):
+            module=importlib.import_module(plugin, package=package)
+            module.app = app
+            modules.append(module)
+    return modules
 class WxRichHandler(logging.Handler):
     def __init__(self, text_ctrl):
         super().__init__()
@@ -83,15 +92,20 @@ class App(wx.Frame):
     def __init__(self, engine):
         super().__init__(None, title="wxPick", size=(800, 600))
         self.engine = engine
+        global notebook_plugins,panel_plugins,toolbar_plugins,graph_plugins
+        notebook_plugins = load_plugins(self,'src.gui.notebook')
+        panel_plugins = load_plugins(self,'src.gui.panel')
+        toolbar_plugins = load_plugins(self,'src.gui.toolbar')
+        graph_plugins = load_plugins(self,'src.gui.graph')
         self.statusBar =self.CreateStatusBar(#number=5, 
             style= wx.STB_SIZEGRIP | wx.STB_SHOW_TIPS, #disable wx.STB_ELLIPSIZE_END
             id=0, name="StatusBar")
         self.statusBar_widths=[80,80,80,-1,-1]
         self.statusBar.SetFieldsCount(5,self.statusBar_widths)
         self.engine.subscribers.append(self.statusbar_update)
-        self.engine.subscribers.append(src.gui.graph.system_stats.update)
-        self.engine.subscribers.append(src.gui.graph.temp.update)
-        self.engine.subscribers.append(src.gui.graph.vacuum.update)
+        for plugin in graph_plugins:
+            # if hasattr(plugin, 'update'):
+                self.engine.subscribers.append(plugin.update)
         self.aui_mgr = wx.aui.AuiManager(self)
         self.aui_mgr.SetManagedWindow(self)
         # self.frame2=FloatingFrame(self, "frame2", (300,300), (200,200), None)
@@ -106,55 +120,57 @@ class App(wx.Frame):
         src.gui.panel.topcam.create(self)
         src.gui.panel.jog.create(self)
         self.notebook = wx.aui.AuiNotebook(self)
-        src.gui.notebook.gcode.create(self.notebook)
+        for plugin in notebook_plugins:
+            # if hasattr(plugin, 'create'):
+                plugin.create(self.notebook)
         self.gcode_handler = WxRichHandler(src.gui.notebook.gcode.gcode_display)
-        src.gui.notebook.log.create(self.notebook)
         self.log_handler = WxRichHandler(src.gui.notebook.log.log_display)
         self.engine.set_log_handler(self.log_handler)
-        src.gui.notebook.objects.create(self.notebook)
-        src.gui.notebook.graphs.create(self.notebook)
-        src.gui.notebook.config.create(self.notebook)
-        src.gui.notebook.calibration.create(self.notebook)
         self.notebook.Bind(wx.aui.EVT_AUINOTEBOOK_PAGE_CLOSE, self.on_notebook_page_close)
         self.aui_mgr.AddPane(self.notebook, wx.aui.AuiPaneInfo().Name("Notebook").CenterPane())
-        src.gui.toolbar.restart.create(self)
-        src.gui.toolbar.vacuum.create(self)
-        src.gui.toolbar.state.create(self)
-        src.gui.toolbar.position.create(self)
+        for plugin in toolbar_plugins:
+            # if hasattr(plugin, 'create'):
+                plugin.create(self)
         self.Bind(wx.aui.EVT_AUI_PANE_CLOSE, self.on_pane_close)
 
     def create_menu(self):
         menubar = wx.MenuBar()
-        view_menu = wx.Menu()
-        src.gui.toolbar.restart.add_to_menu(view_menu)
-        src.gui.toolbar.state.add_to_menu(view_menu)
-        src.gui.toolbar.position.add_to_menu(view_menu)
-        src.gui.toolbar.vacuum.add_to_menu(view_menu)
-        view_menu.AppendSeparator()
-        src.gui.panel.topcam.add_to_menu(view_menu)
-        src.gui.panel.jog.add_to_menu(view_menu)
-        view_menu.AppendSeparator()
-        src.gui.notebook.objects.add_to_menu(view_menu)
-        src.gui.notebook.log.add_to_menu(view_menu)
-        src.gui.notebook.gcode.add_to_menu(view_menu)
-        src.gui.notebook.graphs.add_to_menu(view_menu)
-        src.gui.notebook.config.add_to_menu(view_menu)
-        #view_menu.AppendSeparator()
-        #view_menu.Append(999, "Reset Layout")
-        #self.Bind(wx.EVT_MENU, self.on_reset_layout, id=999)
-        menubar.Append(view_menu, "&Tools")
+        tools_menu = wx.Menu()
+        toolbar_plugins_menu = wx.Menu()
+        for plugin in toolbar_plugins:
+            # if hasattr(plugin, 'add_to_menu'):
+                plugin.add_to_menu(toolbar_plugins_menu)
+        tools_menu.AppendMenu(wx.ID_ANY, "Toolbars", toolbar_plugins_menu)
+        panel_plugins_menu = wx.Menu()
+        for plugin in panel_plugins:
+            # if hasattr(plugin, 'add_to_menu'):
+                plugin.add_to_menu(panel_plugins_menu)
+        tools_menu.AppendMenu(wx.ID_ANY, "Panels", panel_plugins_menu)
+        notebook_plugins_menu = wx.Menu()
+        for plugin in notebook_plugins:
+            # if hasattr(plugin, 'add_to_menu'):
+                plugin.add_to_menu(notebook_plugins_menu)
+        tools_menu.AppendMenu(wx.ID_ANY, "Notebooks", notebook_plugins_menu)
+        # graph_plugins_menu = wx.Menu()
+        # for plugin in graph_plugins:
+        #     # if hasattr(plugin, 'add_to_menu'):
+        #         plugin.add_to_menu(graph_plugins_menu)
+        # tools_menu.AppendMenu(wx.ID_ANY, "Graphs", graph_plugins_menu)
+        # tools_menu.AppendSeparator()
+        # tools_menu.Append(999, "Reset Layout")
+        # self.Bind(wx.EVT_MENU, self.on_reset_layout, id=999)
+        menubar.Append(tools_menu, "&Tools")
         self.SetMenuBar(menubar)
 
     def on_notebook_page_close(self, event: wx.aui.AuiNotebookEvent):
         page_index = event.GetSelection() 
         name = self.notebook.GetPageText(page_index)
-        match name:
-            case src.gui.notebook.graphs.name: self.GetMenuBar().Check(src.gui.notebook.graphs.ID, False)
-            case src.gui.notebook.config.name: self.GetMenuBar().Check(src.gui.notebook.config.ID, False)
-            case src.gui.notebook.gcode.name: self.GetMenuBar().Check(src.gui.notebook.gcode.ID, False)
-            case src.gui.notebook.log.name: self.GetMenuBar().Check(src.gui.notebook.log.ID, False)
-            case src.gui.notebook.objects.name: self.GetMenuBar().Check(src.gui.notebook.objects.ID, False)
-            case _: #propagate what we dont handle and exit
+        for plugin in notebook_plugins:
+            print(plugin.name, name)
+            if plugin.name == name:
+                self.GetMenuBar().Check(plugin.ID, False)
+                break
+        else: #propagate what we dont handle and exit
                 logging.info("unhandled on_notebook_page_close %s"%name)
                 event.Skip()
                 return
@@ -163,13 +179,13 @@ class App(wx.Frame):
 
     def on_pane_close(self, event: wx.aui.AuiManagerEvent):
         pane_info = event.GetPane()
-        match pane_info.name:
-            case src.gui.panel.jog.name:        self.GetMenuBar().Check(src.gui.panel.jog.ID, False)
-            case src.gui.panel.topcam.name:     self.GetMenuBar().Check(src.gui.panel.topcam.ID, False)
-            case src.gui.toolbar.position.name: self.GetMenuBar().Check(src.gui.toolbar.position.ID, False)
-            case src.gui.toolbar.restart.name:  self.GetMenuBar().Check(src.gui.toolbar.restart.ID, False)
-            case src.gui.toolbar.state.name:    self.GetMenuBar().Check(src.gui.toolbar.state.ID, False)
-            case _: logging.info("unhandled")
+        plugins= panel_plugins + toolbar_plugins
+        for plugin in plugins:
+            if plugin.name == pane_info.name:
+                self.GetMenuBar().Check(plugin.ID, False)
+                break
+        else:
+            logging.info("unhandled on_pane_close %s"%pane_info.name)
         event.Skip()
 
     def on_key(self, event):

@@ -1,4 +1,5 @@
 import wx
+import src.app
 import src.gui.graph.vacuum
 import src.gui.graph.system_stats
 import src.gui.graph.temp
@@ -6,6 +7,7 @@ import logging
 logger = logging.getLogger(__name__)
 ID = wx.NewIdRef()
 name="Graphs"
+app:src.app.App = None
 panel = None
 pane = None
 paneinfo=None

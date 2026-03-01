@@ -37,6 +37,9 @@ class GCodeRequestHandler(socketserver.StreamRequestHandler):
             except socket.error as e:
                 logger.error("TCP server read error: %s"%e)
                 break
+            except UnicodeDecodeError as e:
+                logger.error("TCP server decode error: %s"%e)
+                break
         logger.info("TCP client disconnected: %s"%(self.client_address,))
 
 def start_tcp_server(server_address):

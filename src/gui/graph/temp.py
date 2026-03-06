@@ -29,8 +29,8 @@ def create(parent):
     canvas.enableLegend=True
     canvas.enableGrid = True
     canvas.SetFont(wx.Font(14, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
-    canvas.SetFontSizeAxis(10)
-    canvas.SetFontSizeLegend(10)
+    canvas.fontSizeAxis=10
+    canvas.fontSizeLegend=10
     sizer.Add(canvas, 1, wx.ALL | wx.EXPAND, 5)
     panel.GetPane().SetSizer(sizer)
     panel.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, lambda e: parent.Layout())

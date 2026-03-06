@@ -31,8 +31,8 @@ def create(parent):
         c.enableLegend=False
         c.enableGrid = True
         c.SetFont(wx.Font(14, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
-        c.SetFontSizeAxis(10)
-        c.SetFontSizeLegend(10)
+        c.fontSizeAxis=10
+        c.fontSizeLegend=10
         # canvas.Draw(graphics)
         sizer.Add(c, 1, wx.ALL | wx.EXPAND, 5)
     panel.GetPane().SetSizer(sizer)

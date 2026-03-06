@@ -140,17 +140,17 @@ class App(wx.Frame):
         for plugin in toolbar_plugins:
             # if hasattr(plugin, 'add_to_menu'):
                 plugin.add_to_menu(toolbar_plugins_menu)
-        tools_menu.AppendMenu(wx.ID_ANY, "Toolbars", toolbar_plugins_menu)
+        tools_menu.Append(wx.ID_ANY, "Toolbars", toolbar_plugins_menu)
         panel_plugins_menu = wx.Menu()
         for plugin in panel_plugins:
             # if hasattr(plugin, 'add_to_menu'):
                 plugin.add_to_menu(panel_plugins_menu)
-        tools_menu.AppendMenu(wx.ID_ANY, "Panels", panel_plugins_menu)
+        tools_menu.Append(wx.ID_ANY, "Panels", panel_plugins_menu)
         notebook_plugins_menu = wx.Menu()
         for plugin in notebook_plugins:
             # if hasattr(plugin, 'add_to_menu'):
                 plugin.add_to_menu(notebook_plugins_menu)
-        tools_menu.AppendMenu(wx.ID_ANY, "Notebooks", notebook_plugins_menu)
+        tools_menu.Append(wx.ID_ANY, "Notebooks", notebook_plugins_menu)
         # graph_plugins_menu = wx.Menu()
         # for plugin in graph_plugins:
         #     # if hasattr(plugin, 'add_to_menu'):

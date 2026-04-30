@@ -38,6 +38,17 @@ def main():
         Cocoa.NSApplication.sharedApplication()
         Cocoa.NSApp().activateIgnoringOtherApps_(True)
     except NameError: pass
+    wx.SystemOptions.SetOption('osx.openfiledialog.always-show-types', 1)
+    try:
+        from AppKit import NSProcessInfo, NSActivityUserInitiated, NSActivityLatencyCritical,NSActivityIdleSystemSleepDisabled
+        activity = NSProcessInfo.processInfo().beginActivityWithOptions_reason_(
+            NSActivityUserInitiated | 
+            NSActivityLatencyCritical |
+            NSActivityIdleSystemSleepDisabled, "wxPick App Nap Prevention"
+        )
+        logger.info("App Nap prevention activity started.")
+    except ImportError:
+        pass # Not on macOS or AppKit not installed
     engine.start()
     tcpserver_thread=threading.Thread(
         target=src.engine.start_tcp_server, 

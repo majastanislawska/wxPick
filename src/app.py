@@ -160,6 +160,7 @@ class App(wx.Frame):
         # tools_menu.AppendSeparator()
         # tools_menu.Append(999, "Reset Layout")
         # self.Bind(wx.EVT_MENU, self.on_reset_layout, id=999)
+        self.Bind(wx.EVT_MENU, self.save_perspective, tools_menu.Append(wx.ID_ANY, 'Save persective', ''))
         menubar.Append(tools_menu, "&Tools")
         self.SetMenuBar(menubar)
 
@@ -242,6 +243,10 @@ class App(wx.Frame):
                 # ... other modules
         except:
             pass
+    def save_perspective(self,event):
+        with open('layout.ini', 'w') as f:
+            f.write(self.aui_mgr.SavePerspective())
+
     def on_close(self, event):
         self.engine.stop()
         logger.removeHandler(self.log_handler)

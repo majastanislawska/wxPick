@@ -1,4 +1,5 @@
 import wx
+import wx.stc
 import src.engine
 import src.app
 import logging
@@ -16,53 +17,6 @@ gcmd_input=None
 send_button=None
 auto_completion_entries=[]
 
-coloring_rules = { #just stub
-    "G0": "green",
-    "G1": "green",
-    "M114": "blue",
-    "ERROR": "red",
-    "Error": "red",
-    "ok": "green", 
-    "//": "purple",
-    "Disconnect": "red"
-}
-
-# class MyClassCompleter(wx.TextCompleter):
-#     def __init__(self):
-#         wx.TextCompleter.__init__(self)
-#         self._iLastReturned = wx.NOT_FOUND
-#         self._sPrefix = ''
-#         logger.info("MyCompleter init")
-
-#     def Start(self, prefix):
-#         self._sPrefix = prefix.lower()
-#         self._iLastReturned = wx.NOT_FOUND
-#         logger.info("Completer.Start: %s"%(self._sPrefix))
-#         for item in auto_completion_entries:
-#             if item.lower().startswith(self._sPrefix):
-#                 return True
-#         # Nothing found
-#         return False
-#     def GetNext(self):
-#         for i in range(self._iLastReturned+1, len(auto_completion_entries)):
-#             if auto_completion_entries[i].lower().startswith(self._sPrefix):
-#                 self._iLastReturned = i
-#                 return auto_completion_entries[i]
-#          # No more corresponding item
-#         return ''
-
-# class MyTextCompleter(wx.TextCompleterSimple):
-#     def __init__(self):
-#         wx.TextCompleterSimple.__init__(self)
-#     def GetCompletions(self, prefix):
-#         res=[]
-#         text = prefix.lower()
-#         for entry in auto_completion_entries:
-#             if entry.strip().lower().startswith(text):
-#                 res.append(entry)
-#         logger.debug("GetCompletions: %s %s"%(text,res))
-#         return res
-    
 def create(notebook):
     global name,panel, pane, paneinfo, parent
     global gcode_display,gcmd_input,send_button
@@ -71,18 +25,17 @@ def create(notebook):
         wx.ID_ANY, wx.DefaultPosition, wx.DefaultSize, 
         wx.TAB_TRAVERSAL )
     sizer = wx.BoxSizer( wx.VERTICAL )
-    gcode_display = wx.TextCtrl(panel, 
-        style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH)
-    gcode_display.SetFont(wx.Font(16, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
+    gcode_display= wx.stc.StyledTextCtrl(panel)
     sizer.Add(wx.StaticText(panel, label="GCode Output:"), 0, wx.ALL, 5)
+    _setup_gcode_styling(gcode_display)
+    gcode_display.SetReadOnly(True)
+    gcode_display.Bind(wx.stc.EVT_STC_STYLENEEDED, onStyleNeeded)
     sizer.Add(gcode_display, 1, wx.EXPAND | wx.ALL, 5)
     gcmd_sizer = wx.BoxSizer(wx.HORIZONTAL)
-    gcmd_sizer.Add(wx.StaticText(panel, label="Command:"), flag=wx.ALIGN_CENTER_VERTICAL)
-    gcmd_input = wx.TextCtrl(panel, value=wx.EmptyString, style=wx.TE_PROCESS_ENTER)
-    # gcmd_input.SetToolTip("On MacOS press F5 for autocompletion")
-    # gcmd_input.AutoComplete(MyTextCompleter())
-    #gcmd_input.AutoComplete(MyClassCompleter())
-    gcmd_sizer.Add(gcmd_input, 1, wx.EXPAND | wx.ALL, 1)
+    gcmd_input = wx.stc.StyledTextCtrl(panel)
+    _setup_gcode_styling(gcmd_input)
+    gcmd_input.SetMinSize((-1, 60)) # Height for ~3-4 lines
+    gcmd_sizer.Add(gcmd_input, 1, wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM, 2)
     send_button = wx.Button(panel, label="Send")
     gcmd_sizer.Add(send_button, 0, wx.ALL, 1)
     sizer.Add(gcmd_sizer, 0, wx.EXPAND | wx.ALL, 1)
@@ -97,6 +50,49 @@ def create(notebook):
     #src.engine.engine.queue.put(("command", {"method": "gcode/help", "params": {}}, get_gcodes))
     #src.engine.engine.queue.put( ("command", {"method": "objects/query", "params": {"objects": {"gcode": None}}}, get_gcodes))
 
+# Define style IDs
+STYLE_DEFAULT = 0
+STYLE_OK= 1   # OK
+STYLE_ERROR = 2   #Error
+STYLE_GCODECOMMENT = 3   # (Comment) or ; Comment
+STYLE_KLIPPERCOMMENT = 4   # // Comment
+STYLE_COMMAND = 5   # G, M
+STYLE_REMOTE_COMMAND = 6  # Commands sent from other sources (e.g. TCP) than the input field
+
+def _setup_gcode_styling(ctrl:wx.stc.StyledTextCtrl):
+    ctrl.SetLexer(wx.stc.STC_LEX_CONTAINER)
+    font = wx.Font(12, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL)
+    ctrl.StyleSetFont(wx.stc.STC_STYLE_DEFAULT, font)
+    ctrl.SetWrapMode(wx.stc.STC_WRAP_WORD)            # Enable line wrap
+    ctrl.SetEndAtLastLine(True)                    # Don't scroll past last line
+    ctrl.SetUseHorizontalScrollBar(False)          # Disable Horizontal
+    ctrl.SetUseVerticalScrollBar(True)             # Enable Vertical
+    ctrl.SetMarginWidth(1, 0)
+    # ctrl.SetMarginWidth(0, 35) # Line numbers
+    ctrl.SetMarginType(0, wx.stc.STC_MARGIN_NUMBER)
+    ctrl.StyleSetForeground(STYLE_OK, wx.Colour(0, 255, 0))   # Green
+    ctrl.StyleSetForeground(STYLE_COMMAND, wx.Colour(0, 0, 255))   # Blue
+    ctrl.StyleSetForeground(STYLE_REMOTE_COMMAND, wx.Colour(0, 0, 0))
+    ctrl.MarkerDefine(STYLE_REMOTE_COMMAND, wx.stc.STC_MARK_BACKGROUND, background=wx.Colour(200,200,255)) # Light Blue
+    ctrl.StyleSetForeground(STYLE_GCODECOMMENT, wx.Colour(0, 128, 0))   # Green
+    ctrl.StyleSetForeground(STYLE_ERROR, wx.Colour(0, 0, 0))   # black
+    # ctrl.IndicatorSetStyle(STYLE_ERROR, wx.stc.STC_INDIC_ROUNDBOX)
+    # ctrl.IndicatorSetForeground(STYLE_ERROR, wx.Colour(0, 120, 215, 100)) # Transparent
+    ctrl.MarkerDefine(STYLE_ERROR, wx.stc.STC_MARK_BACKGROUND, background=wx.Colour(255, 200, 200))
+    ctrl.StyleSetForeground(STYLE_GCODECOMMENT, wx.Colour(100, 100, 100)) # Grey
+    ctrl.StyleSetItalic(STYLE_GCODECOMMENT, True)
+    ctrl.StyleSetForeground(STYLE_KLIPPERCOMMENT, wx.Colour(85, 107, 47)) # Dark Olive Green
+    ctrl.StyleSetItalic(STYLE_KLIPPERCOMMENT, True)
+
+def onStyleNeeded( event):
+    end_pos = event.GetPosition()
+    ctrl = event.GetEventObject()
+    start_pos = ctrl.GetEndStyled()
+    text = ctrl.GetTextRange(start_pos, end_pos)
+    # logger.info("Styling needed from %d to %d %s"%(start_pos,end_pos,repr(text)))
+    ctrl.StartStyling(start_pos)
+    ctrl.SetStyling(end_pos - start_pos, STYLE_DEFAULT)
+
 # for autocomplete
 # def get_gcodes(data):
 #     logger.debug("get_gcodes: %s"%data)
@@ -107,24 +103,43 @@ def create(notebook):
 #         logger.debug("get_gcodes: %s"%gcode)
 #         auto_completion_entries.append(gcode)
 
-def _append(message):
-    gcode_display.SetDefaultStyle(wx.TextAttr(wx.Colour("black")))
-    gcode_display.AppendText(f"\n{message}")
-    pos = gcode_display.GetInsertionPoint() - len(message) - 1
-    for keyword, color in coloring_rules.items():
-        start = 0
-        while True:
-            start = message.find(keyword, start)
-            if start == -1: break
-            end = start + len(keyword)+1
-            gcode_display.SetStyle(pos + start, pos + end, wx.TextAttr(wx.Colour(color)))
-            start += 1
-    gcode_display.ScrollLines(1)
+def _append(text):
+    # logger.info("Appending to GCode display: %s"%repr(text))
+    gcode_display.SetReadOnly(False)
+    # gcode_display.AppendText(f"\n{message}")
+    start_line = gcode_display.GetLineCount() - 1
+    gcode_display.AppendText(f"{text}\n")
+    gcode_display.StartStyling(gcode_display.PositionFromLine(start_line))
+    if text.startswith("ok"):
+        gcode_display.SetStyling(len(text), STYLE_OK) 
+    elif text.startswith("!!") or text.startswith("Error:"):
+        gcode_display.SetStyling(len(text), STYLE_ERROR) 
+        gcode_display.MarkerAdd(start_line, STYLE_ERROR) # Highlight the whole line red
+    elif text.startswith("//"):
+        gcode_display.SetStyling(len(text), STYLE_KLIPPERCOMMENT)  
+    else:
+         gcode_display.SetStyling(len(text), STYLE_DEFAULT)
+    gcode_display.GotoPos(gcode_display.GetLength())
+    gcode_display.SetReadOnly(True)
+
+def append(text):
+   for lines in text.splitlines():
+       _append(lines)
+def append_command(text, style):
+    # logger.info("append_command: %s, %s"%(repr(text), style))
+    gcode_display.SetReadOnly(False)
+    start_pos = gcode_display.GetEndStyled()
+    start_line = gcode_display.GetLineCount() - 1
+    gcode_display.AppendText(f"{text}\n")
+    gcode_display.StartStyling(start_pos)
+    gcode_display.SetStyling(len(text), style) 
+    gcode_display.MarkerAdd(start_line, style)
 
 def on_gcode_sub(data):
     # logger.debug("on_gcode_sub: %s"%data)
-    message = data['response'] if 'response' in data else str(data)
-    wx.CallAfter(_append,message)
+    if 'response' in data: wx.CallAfter(append,data['response'])
+    elif 'TCP' in data:    wx.CallAfter(append_command,data['command'],STYLE_REMOTE_COMMAND)
+    else:                  wx.CallAfter(append,str(data))
 
 def send_gcode(event):
     command = gcmd_input.GetValue().strip()
@@ -132,9 +147,8 @@ def send_gcode(event):
         # logger.info("Sending GCode: %s" % command)
         src.engine.engine.queue.put(("command", 
                 {"method": "gcode/script", "params": {"script": command}}, None))
-        gcmd_input.Clear()
-        event.Skip()
-        wx.CallAfter(_append,command)
+        wx.CallAfter(append_command,command,STYLE_COMMAND)
+    event.Skip()
 
 def add_to_menu(menu):
     item = menu.AppendCheckItem(ID, "Gcode Notebook")

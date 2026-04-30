@@ -117,8 +117,9 @@ class App(wx.Frame):
         self.Show()
 
     def init_ui(self):
-        src.gui.panel.topcam.create(self)
-        src.gui.panel.jog.create(self)
+        for plugin in panel_plugins:
+            logger.info(f"calling {plugin}.create()")
+            plugin.create(self)
         self.notebook = wx.aui.AuiNotebook(self)
         for plugin in notebook_plugins:
             # if hasattr(plugin, 'create'):

@@ -11,9 +11,9 @@ This feature will not work with stock Klipper unless you patch it with this at l
 
 Besides that, there's:
 
-* a "gcode console" where you can type commands, and view all Pick (klipper) replies (uses standard klipper's "gcode/subscribe_output")
+* a "gcode console" where you can type commands, and view all Pick (klipper) replies (uses standard klipper's "gcode/subscribe_output"). it also monitors commands sent from TCP (openPNP). Command editor uses wx.stc - it's multiline (you can write whole scripts) and it supports undo/redo and drag&drop, there's also autocomplete not only for commands but their parameters too
 * a log console that shows all Pick (klipper) APIServer "webhooks" traffic on it's Unix Socket.
-* Camera support based on openpnp-capture, so if your cmera works witl openpnp it will work here, camera params (exposure, focus, brigthess etc) are supported.
+* Camera support based on openpnp-capture, so if your camera works with openpnp it will work here, camera params (exposure, focus, brigthess etc) are supported.
 * Camera can load calibration data from OpenPNP config (advanced calibration)
 * Camera overlays: Two kinds:
 

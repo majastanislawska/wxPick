@@ -61,6 +61,7 @@ class Engine:
         self.connected = threading.Event()
         self.status = {}
         self.pending_requests = {}
+        self.on_connect = []
         self.subscribed_objects={
              "webhooks": None 
             ,"toolhead": ["position"]
@@ -119,6 +120,11 @@ class Engine:
             self.connected.clear()
             self.socket.close()
             self.queue.put(("socket_closed", None, None))
+
+    def register_on_connect(self, method, params, callback=None):
+        self.on_connect.append((method, params, callback))
+        if self.connected.is_set():
+            self.send_command(method, params, callback)
 
     def subscribe_gcode(self,callback):
         self.gcode_sub_callback=callback
@@ -184,6 +190,8 @@ class Engine:
                 logger.info("Recreating subscriptions.")
                 self.subscribe_gcode(self.gcode_sub_callback)
                 self.subscribe_objects()
+                for method, params, callback in self.on_connect:
+                    self.send_command(method, params, callback)
             elif msg_type == "command":
                 if self.connected.is_set(): self.send_command(data["method"], data.get("params", {}), callback)
                 else: logger.info("not connected, discarding %s"%((msg_type, data, callback),))

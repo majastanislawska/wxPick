@@ -87,6 +87,7 @@ auto_completion_entries={
     'TURN_OFF_PUMPS': None, 'VAC': None, 
     'VALVE_GET': {'VALVE': valves},
     'VALVE_SET': {'VALVE': valves, 'VALUE': None},
+    'VALVE_WAIT': {'VALVE': valves, 'MINIMUM': None, 'MAXIMUM': None, 'TIMEOUT': None},
     'PD_CAPS': {'MCU': None},'PD_GET': {'MCU': None},'PD_SET': {'MCU': None,'VOLTAGE': None,'MODE': ['FIXED', 'PPS', 'AVS']}, #power delivery extension
     'SET_LED_EFFECT': {'EFFECT': None}, 'STOP_LED_EFFECTS': None,#led effect extension
     #[adxl345]
@@ -210,17 +211,17 @@ def parse_config(response):
         elif item.startswith("led"): leds.append(item[4:])
         elif item.startswith("manual_stepper"): manual_steppers.append(item[15:])
         elif item.startswith("stepper"): steppers.append(item)
-        elif item.startswith("pressure_pump"): pumps.append(item[14:])
-        elif item.startswith("pressure_valve"): valves.append(item[15:])
-        elif item.startswith("temperature_sensor"): temperature_sensors.append(item[19:])
+        elif item.startswith("pressure_pump"):   pumps.append(config[item]['gcode_id'] if 'gcode_id' in config[item] else item[14:])
+        elif item.startswith("pressure_valve"): valves.append(config[item]['gcode_id'] if 'gcode_id' in config[item] else item[15:])
+        elif item.startswith("temperature_sensor"): temperature_sensors.append(config[item]['gcode_id'] if 'gcode_id' in config[item] else item[19:])
         elif item.startswith("adxl345"): accelerometers.append(item[8:])
         elif item.startswith("icm20948"):accelerometers.append(item[11:])
         elif item.startswith("lis2dw"):  accelerometers.append(item[8:])
         elif item.startswith("lis3dh"):  accelerometers.append(item[8:])
         elif item.startswith("bmi160"):  accelerometers.append(item[7:])
         elif item.startswith("mpu9250"): accelerometers.append(item[8:])
-        elif item.startswith("extruder"): extruders.append(item[9:])
-        elif item.startswith("heater"): heaters.append(item[7:])
+        elif item.startswith("extruder"): extruders.append(item)
+        elif item.startswith("heater"): heaters.append(config[item]['gcode_id'] if 'gcode_id' in config[item] else item[7:])
         elif item.startswith("delayed_gcode"): delayed_gcode.append(item[13:])
         elif item.startswith("tmc2209"): tmcs.append(item[8:])
         elif item.startswith("tmc2208"): tmcs.append(item[8:])
@@ -244,6 +245,7 @@ STYLE_GCODECOMMENT = 3   # (Comment) or ; Comment
 STYLE_KLIPPERCOMMENT = 4   # // Comment
 STYLE_COMMAND = 5   # G, M
 STYLE_REMOTE_COMMAND = 6  # Commands sent from other sources (e.g. TCP) than the input field
+STYLE_TOOLBAR_COMMAND = 7 # Commands sent from toolbar buttons
 
 def _setup_gcode_styling(ctrl:wx.stc.StyledTextCtrl):
     ctrl.SetLexer(wx.stc.STC_LEX_CONTAINER)
@@ -260,6 +262,8 @@ def _setup_gcode_styling(ctrl:wx.stc.StyledTextCtrl):
     ctrl.StyleSetForeground(STYLE_COMMAND, wx.Colour(0, 0, 255))   # Blue
     ctrl.StyleSetForeground(STYLE_REMOTE_COMMAND, wx.Colour(0, 0, 0))
     ctrl.MarkerDefine(STYLE_REMOTE_COMMAND, wx.stc.STC_MARK_BACKGROUND, background=wx.Colour(200,200,255)) # Light Blue
+    ctrl.StyleSetForeground(STYLE_TOOLBAR_COMMAND, wx.Colour(0, 0, 0))
+    ctrl.MarkerDefine(STYLE_TOOLBAR_COMMAND, wx.stc.STC_MARK_BACKGROUND, background=wx.Colour(200,255,200)) # Light Green
     ctrl.StyleSetForeground(STYLE_GCODECOMMENT, wx.Colour(0, 128, 0))   # Green
     ctrl.StyleSetForeground(STYLE_ERROR, wx.Colour(0, 0, 0))   # black
     # ctrl.IndicatorSetStyle(STYLE_ERROR, wx.stc.STC_INDIC_ROUNDBOX)
@@ -358,11 +362,13 @@ def append_command(text, style):
     gcode_display.StartStyling(start_pos)
     gcode_display.SetStyling(len(text), style) 
     gcode_display.MarkerAdd(start_line, style)
+    gcode_display.SetReadOnly(True)
 
 def on_gcode_sub(data):
     # logger.debug("on_gcode_sub: %s"%data)
     if 'response' in data: wx.CallAfter(append,data['response'])
     elif 'TCP' in data:    wx.CallAfter(append_command,data['command'],STYLE_REMOTE_COMMAND)
+    elif 'toolbar' in data:wx.CallAfter(append_command,data['command'],STYLE_TOOLBAR_COMMAND)
     else:                  wx.CallAfter(append,str(data))
 
 def send_gcode(event):

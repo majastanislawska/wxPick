@@ -54,6 +54,7 @@ def update(response):
     #{'eventtime': 293848.747924456, 'status': {'toolhead': {'position': [0.0, 470.0, -3.0, 0.0, 0.0, 0.0]}}}
     if not 'toolhead' in response['status']: return
     pos=response['status']['toolhead']['position']
+    if not pos: return
     for coord,ctrl in zip(pos,[pos_x, pos_y, pos_z, pos_e, pos_a, pos_b]):
         ctrl.SetLabel(format(coord,"+03.3f"))
     toolbar.SendSizeEvent()

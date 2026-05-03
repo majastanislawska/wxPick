@@ -102,7 +102,6 @@ def update(response):
             toolbar.Refresh()
     if "pressure_pump PUMP" in response['status']:
         state = response['status']["pressure_pump PUMP"]
-        logger.debug("Pump state: %s"%state)
         if 'power' in state: 
             toolbar.SetToolSticky(1, state['power']!=0)
             toolbar.Refresh()

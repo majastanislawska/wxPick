@@ -49,7 +49,7 @@ def update(response):
             data[sensor]=[]
             line_color[sensor]=colors.pop()
         if len(data[sensor])>250: data[sensor].pop(0)
-        data[sensor].append((xval,response['status'][sensor]['temperature']))
+        data[sensor].append((xval,response['status'][sensor].get('temperature',0)))
         line[sensor] =wx.lib.plot.PolyLine(data[sensor], legend=sensor.split()[1],colour=line_color[sensor], width=1)
     graphics = wx.lib.plot.PlotGraphics(list(line.values()), "Temperature", "", 'temperature')
     canvas.Draw(graphics,(0 if xval<100 else xval-100,xval))

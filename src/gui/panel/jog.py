@@ -1,4 +1,5 @@
 import wx
+import wx.aui
 import src.engine
 import src.gui.error
 import logging
@@ -137,7 +138,7 @@ def create(parent_frame):
     bind_buttons()
     panel.SetSizer(grid)
     paneinfo= (wx.aui.AuiPaneInfo().Name(name).
-        Left().Caption("Jog Panel").
+        Left().Caption(name).
         MaximizeButton(True).MinimizeButton(True).PinButton(True).
         BestSize( wx.Size( 300,180 ) ).
         MinSize( wx.Size( 300,180 ) ).
@@ -196,7 +197,7 @@ def send_gcode(command):
     src.engine.engine.send_command("gcode/script", {"script": command},src.gui.error.gcode_error_callback)
 
 def add_to_menu(menu):
-    item = menu.AppendCheckItem(ID, "Jog Panel")
+    item = menu.AppendCheckItem(ID, name)
     item.Check(True)
     menu.Bind(wx.EVT_MENU, on_toggle, id=ID)
     return item

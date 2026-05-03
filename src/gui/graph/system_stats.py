@@ -47,7 +47,7 @@ def update(response):
     xval=int(response['eventtime']-data_start)
     if "sysload" in response['status']['system_stats']:
         if len(data_sysload)>100: data_sysload.pop(0)
-        data_sysload.append((xval,response['status']['system_stats']['sysload']))
+        data_sysload.append((xval,response['status']['system_stats'].get('sysload',0)))
         line[0] = wx.lib.plot.PolyLine(data_sysload, legend="sysload",colour='red', width=1)
         graphics[0] = wx.lib.plot.PlotGraphics([line[0]], 'SysLoad', "", 'SysLoad')
         canvas[0].Draw(graphics[0],(0 if xval<100 else xval-100,xval))

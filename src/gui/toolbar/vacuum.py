@@ -11,12 +11,12 @@ pane = None
 paneinfo=None
 parent=None
 
-pump_value = "-50"
+pump_value = -50.0
 
 class PumpPopup(wx.PopupTransientWindow):
     def __init__(self, parent, style=wx.BORDER_SIMPLE):
         super().__init__(parent, style)
-        self.txt = wx.TextCtrl(self, value=pump_value, size=(100, -1), style=wx.TE_PROCESS_ENTER)
+        self.txt = wx.TextCtrl(self, value=str(pump_value), size=(100, -1), style=wx.TE_PROCESS_ENTER)
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(self.txt, 0, wx.EXPAND | wx.ALL, 10)
         self.SetSizer(sizer)
@@ -32,7 +32,7 @@ class PumpPopup(wx.PopupTransientWindow):
 
     def on_enter(self, event):
         global pump_value
-        pump_value = self.txt.GetValue()
+        pump_value = float(self.txt.GetValue())
         print(f"Value set: {pump_value}")
         self.Dismiss()
 
@@ -51,6 +51,7 @@ def create(parent_frame):
     toolbar.Bind(wx.aui.EVT_AUITOOLBAR_TOOL_DROPDOWN, on_dropdown, id=wx.ID_ANY)
     paneinfo=wx.aui.AuiPaneInfo().Name(name).ToolbarPane().Top().Floatable(True).CloseButton(True).Show(True)
     parent_frame.aui_mgr.AddPane(toolbar, paneinfo)
+    src.engine.engine.subscribers.append(update)
     toolbar.Realize()
     return toolbar
 
@@ -60,7 +61,6 @@ def on_click(event):
         case 1: 
             val="0" if toolbar.GetToolSticky(1) else pump_value
             command=f"SET_PUMP_PRESSURE PUMP=PUMP TARGET={val}"
-            toolbar.SetToolSticky(1, not toolbar.GetToolSticky(1))
         case 2: command=f"VALVE_SET VALVE=NL VALUE={state}"
         case 3: command=f"VALVE_SET VALVE=NR VALUE={state}"
         case _: logging.warning("unhandled event in %s"%(name)); return
@@ -88,3 +88,24 @@ def on_toggle(event):
     parent.aui_mgr.GetPane(name).Show(event.IsChecked())
     parent.aui_mgr.Update()
 
+def update(response):
+    global pump_value
+    if 'pressure_valve LEFT' in response['status']:
+        state = response['status']['pressure_valve LEFT']
+        if 'on' in state: 
+            toolbar.SetToolSticky(2, state['on'])
+            toolbar.Refresh()
+    if 'pressure_valve RIGHT' in response['status']:
+        state = response['status']['pressure_valve RIGHT']
+        if 'on' in state:
+            toolbar.SetToolSticky(3, state['on'])
+            toolbar.Refresh()
+    if "pressure_pump PUMP" in response['status']:
+        state = response['status']["pressure_pump PUMP"]
+        logger.debug("Pump state: %s"%state)
+        if 'power' in state: 
+            toolbar.SetToolSticky(1, state['power']!=0)
+            toolbar.Refresh()
+        if 'target' in state and state['target']!=0: 
+            pump_value=state['target'] #store last nonzero value for next time the pump is turned on
+            toolbar.Refresh()

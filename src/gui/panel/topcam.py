@@ -57,6 +57,7 @@ def create(parent_frame):
     panel.SetSizer(grid)
     panel.Layout()
     parent_frame.aui_mgr.Update()
+    src.engine.engine.subscribers.append(update)
     return panel
 
 def cam_enable(enable):
@@ -65,8 +66,9 @@ def cam_enable(enable):
     else: topcam.cam_stop()
 
 def toplight_cmd(event):
-    src.engine.engine.send_command("gcode/script", 
-        {"script": f"TOP_LIGHT S={1 if topcam_light.GetValue() else 0}"},src.gui.error.gcode_error_callback)
+    command=f"TOP_LIGHT S={1 if topcam_light.GetValue() else 0}"
+    src.engine.engine.send_command("gcode/script", {"script": command},src.gui.error.gcode_error_callback)
+    src.engine.engine.queue.put(("response", {"sub":"gcode","params":{"toolbar":'top_light',"command":command}}, None))
 
 def add_to_menu(menu):
     item = menu.AppendCheckItem(ID, "Topcam Panel")
@@ -77,6 +79,13 @@ def add_to_menu(menu):
 def on_toggle(event):
     parent.aui_mgr.GetPane(name).Show(event.IsChecked())
     parent.aui_mgr.Update()
+
+def update(response):
+    global pump_value
+    if 'gcode_macro TOP_LIGHT' in response['status']:
+        state = response['status']['gcode_macro TOP_LIGHT']
+        if 'on' in state: topcam_light.SetValue(state['on']!=0)
+
 class SingleChoiceDialogAdapter(wx.propgrid.PGEditorDialogAdapter):
     def __init__(self, choices):
         wx.propgrid.PGEditorDialogAdapter.__init__(self)

@@ -70,10 +70,10 @@ class Engine:
             ,"temperature_sensor toolhead_temp": ['temperature']
             ,"pressure_valve LEFT": None
             ,"pressure_valve RIGHT": None
-            ,"pressure_sensor a28": ['pressure']
             ,"pressure_pump PUMP": None
-            # ,"pressure_sensor ads": ['pressure']
             ,"ch224q_pd toolhead": ['voltage','powergood']
+            ,"gcode_macro TOP_LIGHT": ['on']
+            ,"gcode_macro BOTTOM_LIGHT": ['on']
             }
         self.subscribers=[]
         self.gcode_sub_callback=None

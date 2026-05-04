@@ -22,12 +22,23 @@ Besides that, there's:
   you can grab own camera frame, process it and than assign it to `camera.frameoverlay` to be displayed.
   * second is in form of callback that is called right before widget is rendered to xwBitmap. create `callback(w,h,canvas_rgb)` and append it to `camera.canvas_overlays` list. `w` and `h` is size of paintarea of camera widget, i may add coordinates of rectangle where camera frame actually is in it with scaling factor etc in the future.
 
-* Camera window, with controls for light and zoom (have `TOP_LIGHT S={0|1}` in Klipper config to control your camera light)
+* Camera window, with controls for light and zoom. Have `TOP_LIGHT S={0|1}` macro in Klipper config to control your camera light. Widget subscribes to macro variable 'on' so it reflect state set from elsewhere.
+
+```text
+    [gcode_macro TOP_LIGHT]
+    variable_on=0
+    gcode:
+      {% set S = params.S|default(0.0)|float %}
+      SET_LED LED=toplight RED={S} GREEN={S} BLUE={S}
+      SET_GCODE_VARIABLE MACRO=TOP_LIGHT VARIABLE=on VALUE={S}
+```
+
 * a Jog Panel
 * a Toolbar with buttons for most important commands (emergency shutdown and restart), it also serves as a boilerplate on how to create own toolbars with other commands.
 * Object Browser. A treeview panel that let you see whole internal state of Pick (Klipper)
 * jog buttons for rotary axes do 45 and 90 move instead of 50 and 100. Quite practical when your rotary axes are in degrees
-* graphs.
+* Toollbar widget to control pump and valves, You can set target pump pressure from dropdown. as with top light widget subscribes to state of respective printer objects so it reflect state of pump and valves set from elsewhere. Nammes are hardcoded so pump have to have `gcode_id: PUMP` and valves `NL` and `NR` for left and right respectively.
+* Graphs. Currently there are graphs for pressure, system_stats (sysload and memavail), and temperature. Any object listed in `self.subscribed_objects` of Engine class that have temperature or pressure param will be graphed. Graphing something else can be done by cloning and tweaking one of existing graph modules.
 * easily expandable modular design and code
 
 This is very early stage project, a lot of things may change.
